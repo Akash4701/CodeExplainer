@@ -2,8 +2,12 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "this is the backend for codeexplainr",
+  "type": "module",
   "main": "index.ts",
   "scripts": {
+    "dev": "node --watch --loader ts-node/esm index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -14,6 +18,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
+    "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }
 }
