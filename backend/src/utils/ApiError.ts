@@ -4,9 +4,9 @@ class ApiError extends Error {
     public success: boolean;
     public errors: string[];
     public data: null;
-
+  
     constructor(statusCode: number, message: string, errors: string[] = [], stack?: string) {
-        super(message);
+        super(message); 
         this.statusCode = statusCode;
 
         this.message = message;
@@ -21,3 +21,4 @@ class ApiError extends Error {
         }
     }
 }
+export {ApiError}
