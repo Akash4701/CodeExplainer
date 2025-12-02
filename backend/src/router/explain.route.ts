@@ -1,4 +1,8 @@
 import { Router } from "express";
-const router= Router();
+import { explainCode } from "../controller/explainer.controller.js";
 
-router.post("/explain",);
+const router = Router();
+
+router.route("/explain").post(explainCode);
+
+export default router;
