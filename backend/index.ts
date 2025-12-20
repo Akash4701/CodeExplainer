@@ -6,7 +6,7 @@ dotenv.config({
     path: './.env'
 })
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // optional but useful
+app.use(express.urlencoded({ extended: true })); 
 
 
 app.get('/',(req,res)=>{

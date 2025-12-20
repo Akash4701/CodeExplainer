@@ -1,52 +1,8 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 ;
+import { buildCodeNarrationPrompt } from './CodeExplainerPrompt.js';
 
-// Builds the full code-narration prompt
-function buildCodeNarrationPrompt(code: string, language: string): string {
-  return `
-You are an expert code narrator and senior-level software engineer.
-Your job is to understand the code deeply and explain it with maximum clarity, accuracy, and insight.
-
-Your goal is to produce:
-1. "narration" → a rich, intuitive, high-quality explanation of what the code does, how it works, why each part exists, and how the logic flows from start to end.
-   - It should feel like a helpful senior engineer walking someone through the code.
-   - Use simple, clear language.
-   - Highlight important conditions, loops, function behavior, and data transformations.
-
-2. "line_map" → a list of objects where each element maps:
-   - "line": the exact line number
-   - "text": a concise 1–2 sentence explanation of what that line is doing
-
-The output MUST be returned as a valid JSON object in EXACTLY this format:
-
-{
-  "narration": "Full, high-quality explanation...",
-  "line_map": [
-    { "line": number, "text": "description" }
-  ]
-}
-
-STRICT RULES:
-- Output ONLY the JSON. No extra text.
-- DO NOT repeat or restate the code.
-- DO NOT add comments outside JSON.
-- Maintain accurate line numbers exactly as in the provided code.
-- Explanations must be correct, precise, and helpful.
-- If multiple lines serve one purpose, still produce an entry for each line.
-- If the code is empty or invalid, return:
-  { "error": "Invalid or empty code" }
-
-Here is the code. Use this exact formatting and line structure.
-
-LANGUAGE: ${language}
-
-CODE:
-${code}
-`;
-}
-
-// Main function that accepts code and language as parameters
 export async function generateCodeNarration(
   code: string,
   language: string
@@ -54,19 +10,16 @@ export async function generateCodeNarration(
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash-exp",
+    model: "gemini-2.5-flash"
   });
 
   const finalPrompt = buildCodeNarrationPrompt(code, language);
 
-  const result = await model.generateContentStream(finalPrompt);
+  const result = await model.generateContent(finalPrompt);
 
-  let fullResponse = "";
+  
 
-  for await (const chunk of result.stream) {
-    const chunkText = chunk.text();
-    fullResponse += chunkText;
-  }
+let fullResponse = result.response.text();
 
   return fullResponse;
 }
