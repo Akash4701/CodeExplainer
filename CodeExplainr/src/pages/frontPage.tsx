@@ -1,12 +1,26 @@
 import { Code2, MessageSquare, Pause, Play, Upload, Volume2, VolumeX } from "lucide-react";
 import { useState } from "react";
+import TextToSpeech from "../Components/textToSpeech";
+
+
+interface LineExplanation {
+  line: number;
+  text: string;
+}
+
+interface ExplanationData {
+  explanation: {
+    narration: string;
+    line_map: LineExplanation[];
+  };
+}
 
 export const MainContent = () => {
-  const [code, setCode] = useState('');
+  // const [code, setCode] = useState('');
   const [language, setLanguage] = useState('javascript');
   const [isExplaining, setIsExplaining] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [currentLine, setCurrentLine] = useState(null);
+  // const [currentLine, setCurrentLine] = useState(0);
   const [showAskDialog, setShowAskDialog] = useState(false);
 
   const languages = [
@@ -29,8 +43,54 @@ export const MainContent = () => {
     setIsExplaining(!isExplaining);
   };
 
+   const [code] = useState(`function fibonacci(n: number): number {
+  if (n <= 1) return n;
+  return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+const result = fibonacci(10);
+console.log("Fibonacci of 10:", result);`);
+
+  const [currentLine, setCurrentLine] = useState<number | null>(null);
+
+  const explanationData: ExplanationData = {
+    explanation: {
+      narration: "This code defines and uses a recursive function to calculate a Fibonacci number. The primary goal is to compute the 10th Fibonacci number and then display it on the console. The core logic resides within the fibonacci function. This function takes a single number n as input and is designed to return the nth Fibonacci number. It implements the classic recursive definition of the Fibonacci sequence. The function first checks for a base case: if n is 0 or 1, it directly returns n. This is crucial because it provides the starting values for the sequence and prevents infinite recursion. If n is greater than 1, the function proceeds to its recursive step, which calculates the nth Fibonacci number by summing the n minus 1 th and n minus 2 th Fibonacci numbers. After the fibonacci function is defined, the code then calls it with an argument of 10. The returned value is stored in a constant variable named result. Finally, a console dot log statement is used to print the calculated result to the standard output.",
+      line_map: [
+        {
+          line: 1,
+          text: "Defines a function named fibonacci that accepts a number n as input and is typed to return a number."
+        },
+        {
+          line: 2,
+          text: "This line checks for the base cases of the Fibonacci sequence; if n is 0 or 1, it immediately returns n to stop recursion and provide initial values."
+        },
+        {
+          line: 3,
+          text: "This is the recursive step: if n is greater than 1, it calculates the nth Fibonacci number by summing the results of calling itself for n minus 1 and n minus 2."
+        },
+        {
+          line: 4,
+          text: "Closes the definition of the fibonacci function."
+        },
+        {
+          line: 5,
+          text: "This is an empty line, serving as a visual separator."
+        },
+        {
+          line: 6,
+          text: "Calls the fibonacci function with an argument of 10 and stores the returned 10th Fibonacci number in a constant variable named result."
+        },
+        {
+          line: 7,
+          text: "Prints a descriptive string Fibonacci of 10 followed by the value stored in the result variable to the console."
+        }
+      ]
+    }
+  };
+
   return (
-    <main className="flex-1 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <main className="flex-1 bg-linear-to-br from-gray-900 via-gray-800 to-gray-900">
       <div className="container mx-auto px-6 py-12">
         {/* Hero Section */}
         <div className="text-center mb-12">
@@ -99,34 +159,17 @@ export const MainContent = () => {
               </div>
 
               {/* Explained Code */}
-              <div>
-                <label className="block text-purple-300 text-sm mb-2 font-semibold flex items-center">
-                  <MessageSquare size={16} className="mr-2" />
-                  Line-by-Line Explanation
-                </label>
-                <div className="w-full h-96 bg-[#0a1929] border border-cyan-500/30 rounded-lg px-4 py-3 overflow-y-auto shadow-inner">
-                  {code ? (
-                    <div className="font-mono text-sm">
-                      {code.split('\n').map((line, idx) => (
-                        <div
-                          key={idx}
-                          className={`py-1 px-2 rounded transition-all cursor-pointer hover:bg-cyan-500/10 ${
-                            currentLine === idx ? 'bg-cyan-500/20 border-l-4 border-cyan-400' : ''
-                          }`}
-                          onClick={() => setCurrentLine(idx)}
-                        >
-                          <span className="text-cyan-600 mr-4 select-none">{idx + 1}</span>
-                          <span className="text-cyan-300">{line || ' '}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-gray-500 text-center mt-20">
-                      Paste code to see explanation
-                    </div>
-                  )}
-                </div>
-              </div>
+              {
+                isExplaining && 
+                 <TextToSpeech 
+          code={code} 
+          currentLine={currentLine} 
+          setCurrentLine={setCurrentLine}
+          explanationData={explanationData}
+        />
+              }
+              
+            
             </div>
 
             {/* Action Buttons */}
@@ -134,7 +177,7 @@ export const MainContent = () => {
               <button
                 onClick={startExplanation}
                 disabled={!code}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-700 text-white px-8 py-3 rounded-lg transition-all flex items-center gap-2 shadow-lg hover:shadow-purple-500/50 disabled:cursor-not-allowed font-semibold"
+                className="bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-700 text-white px-8 py-3 rounded-lg transition-all flex items-center gap-2 shadow-lg hover:shadow-purple-500/50 disabled:cursor-not-allowed font-semibold"
               >
                 {isExplaining ? <Pause size={20} /> : <Play size={20} />}
                 {isExplaining ? 'Pause Explanation' : 'Start Voice Explanation'}
