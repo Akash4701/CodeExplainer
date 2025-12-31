@@ -16,7 +16,7 @@ interface ExplanationData {
 }
 
 export const MainContent = () => {
-  // const [code, setCode] = useState('');
+ 
   const [language, setLanguage] = useState('javascript');
   const [isExplaining, setIsExplaining] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -28,7 +28,7 @@ export const MainContent = () => {
     'C#', 'Ruby', 'Go', 'Rust', 'PHP'
   ];
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = (e:any) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
@@ -43,7 +43,7 @@ export const MainContent = () => {
     setIsExplaining(!isExplaining);
   };
 
-   const [code] = useState(`function fibonacci(n: number): number {
+   const [code,setCode] = useState(`function fibonacci(n: number): number {
   if (n <= 1) return n;
   return fibonacci(n - 1) + fibonacci(n - 2);
 }
@@ -53,41 +53,45 @@ console.log("Fibonacci of 10:", result);`);
 
   const [currentLine, setCurrentLine] = useState<number | null>(null);
 
-  const explanationData: ExplanationData = {
-    explanation: {
-      narration: "This code defines and uses a recursive function to calculate a Fibonacci number. The primary goal is to compute the 10th Fibonacci number and then display it on the console. The core logic resides within the fibonacci function. This function takes a single number n as input and is designed to return the nth Fibonacci number. It implements the classic recursive definition of the Fibonacci sequence. The function first checks for a base case: if n is 0 or 1, it directly returns n. This is crucial because it provides the starting values for the sequence and prevents infinite recursion. If n is greater than 1, the function proceeds to its recursive step, which calculates the nth Fibonacci number by summing the n minus 1 th and n minus 2 th Fibonacci numbers. After the fibonacci function is defined, the code then calls it with an argument of 10. The returned value is stored in a constant variable named result. Finally, a console dot log statement is used to print the calculated result to the standard output.",
-      line_map: [
-        {
-          line: 1,
-          text: "Defines a function named fibonacci that accepts a number n as input and is typed to return a number."
-        },
-        {
-          line: 2,
-          text: "This line checks for the base cases of the Fibonacci sequence; if n is 0 or 1, it immediately returns n to stop recursion and provide initial values."
-        },
-        {
-          line: 3,
-          text: "This is the recursive step: if n is greater than 1, it calculates the nth Fibonacci number by summing the results of calling itself for n minus 1 and n minus 2."
-        },
-        {
-          line: 4,
-          text: "Closes the definition of the fibonacci function."
-        },
-        {
-          line: 5,
-          text: "This is an empty line, serving as a visual separator."
-        },
-        {
-          line: 6,
-          text: "Calls the fibonacci function with an argument of 10 and stores the returned 10th Fibonacci number in a constant variable named result."
-        },
-        {
-          line: 7,
-          text: "Prints a descriptive string Fibonacci of 10 followed by the value stored in the result variable to the console."
-        }
-      ]
+const explanationData: ExplanationData = {
+explanation: {
+  narration: "The program begins its execution by initiating a call to the fibonacci function with the argument n = 10.",
+  line_map: [
+    {
+      "line": 5,
+      "text": "The program execution begins by calling the `fibonacci` function with `n=10`. This initiates the entire recursive computation."
+    },
+    {
+      "line": 2,
+      "text": "Inside the `fibonacci` function, this line checks if `n` is `10` or less. Since `10` is not less than or equal to `1`, the condition is false, and execution proceeds to the next line."
+    },
+    {
+      "line": 3,
+      "text": "The function recursively calls itself twice: first with `n-1` (i.e., `fibonacci(9)`) and then with `n-2` (i.e., `fibonacci(8)`). The execution of `fibonacci(10)` is paused until both sub-calls return their values."
+    },
+    {
+      "line": 2,
+      "text": "As the recursion deepens, calls like `fibonacci(1)` will eventually be made. Here, `n` is `1`. The condition `1 <= 1` is true, causing `fibonacci(1)` to directly return `1`."
+    },
+    {
+      "line": 2,
+      "text": "Similarly, calls like `fibonacci(0)` will occur. Here, `n` is `0`. The condition `0 <= 1` is true, causing `fibonacci(0)` to directly return `0`."
+    },
+    {
+      "line": 3,
+      "text": "Once base cases return, calls higher up the stack (e.g., `fibonacci(2)`) can resume. This line sums the returned values from its sub-calls (e.g., `fibonacci(1)` returning `1` and `fibonacci(0)` returning `0`) and returns their sum (`1 + 0 = 1`). This summation and return process continues up the call stack until the initial `fibonacci(10)` call receives its results."
+    },
+    {
+      "line": 5,
+      "text": "After the entire recursive calculation completes, the final result (`55`) is returned by `fibonacci(10)` and assigned to the `result` constant."
+    },
+    {
+      "line": 6,
+      "text": "Finally, the program logs the computed Fibonacci number, `55`, to the console."
     }
-  };
+  ]
+}
+};
 
   return (
     <main className="flex-1 bg-linear-to-br from-gray-900 via-gray-800 to-gray-900">
