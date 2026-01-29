@@ -10,7 +10,7 @@ const Header = () => {
       <div className="container mx-auto px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 group cursor-pointer">
-            <div className="bg-gradient-to-br from-purple-600 to-pink-600 p-2.5 rounded-xl shadow-lg group-hover:shadow-purple-500/50 transition-all duration-300 group-hover:scale-110">
+            <div className="bg-linear-to-br from-purple-600 to-pink-600 p-2.5 rounded-xl shadow-lg group-hover:shadow-purple-500/50 transition-all duration-300 group-hover:scale-110">
               <Code2 className="text-white" size={26} />
             </div>
             <div>

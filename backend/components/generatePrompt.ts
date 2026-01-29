@@ -5,7 +5,7 @@ import { buildCodeNarrationPrompt } from './CodeExplainerPrompt.js';
 
 export async function generateCodeNarration(
   code: string,
-  language: string
+  
 ): Promise<string> {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -13,7 +13,7 @@ export async function generateCodeNarration(
     model: "gemini-2.5-flash"
   });
 
-  const finalPrompt = buildCodeNarrationPrompt(code, language);
+  const finalPrompt = buildCodeNarrationPrompt(code);
 
   const result = await model.generateContent(finalPrompt);
 
@@ -27,7 +27,7 @@ let fullResponse = result.response.text();
 // Alternative: Return as a stream for real-time processing
 export async function* generateCodeNarrationStream(
   code: string,
-  language: string
+ 
 ): AsyncGenerator<string, void, unknown> {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -35,7 +35,7 @@ export async function* generateCodeNarrationStream(
     model: "gemini-1.5-flash-latest",
   });
 
-  const finalPrompt = buildCodeNarrationPrompt(code, language);
+  const finalPrompt = buildCodeNarrationPrompt(code);
 
   const result = await model.generateContentStream(finalPrompt);
 
@@ -58,7 +58,7 @@ console.log("Fibonacci of 10:", result);
   const inputLanguage = "typescript";
 
   // Using the full response version
-  const narration = await generateCodeNarration(inputCode, inputLanguage);
+  const narration = await generateCodeNarration(inputCode);
   console.log(narration);
 
   // Or using the stream version

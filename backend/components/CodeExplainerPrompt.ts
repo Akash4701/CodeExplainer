@@ -1,4 +1,4 @@
-export function buildCodeNarrationPrompt(code: string, language: string): string {
+export function buildCodeNarrationPrompt(code: string): string {
   return `
 You are an expert software engineer and code execution narrator.
 
@@ -40,8 +40,6 @@ Rules:
 
 Here is the code (preserve formatting and line structure):
 INPUT DETAILS:
-LANGUAGE: ${language}
-
 CODE:
 ${code}
 `;

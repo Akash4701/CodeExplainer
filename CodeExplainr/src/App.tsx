@@ -8,7 +8,7 @@ export default function App() {
     <div className="min-h-screen flex flex-col bg-slate-950">
       <Header />
       <MainContent />
-      <Footer />
+     
     </div>
   );
 }

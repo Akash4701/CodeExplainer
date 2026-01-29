@@ -1,5 +1,6 @@
 import express from 'express'
 import dotenv from 'dotenv'
+import cors from 'cors'
 
 const app=express();
 dotenv.config({
@@ -7,7 +8,7 @@ dotenv.config({
 })
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); 
-
+app.use(cors());
 
 app.get('/',(req,res)=>{
     res.send("Your backend server has started")

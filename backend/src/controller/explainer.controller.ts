@@ -4,11 +4,11 @@ import {asyncHandler} from "../utils/AsyncHandler.js";
 import type{ Request, Response } from "express";
 
 export const explainCode = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const {codeSnippet,language}=req.body;
-    console.log("Received request to explain code in language:", language);
+    const {codeSnippet}=req.body;
+   
     console.log('Recieved code',codeSnippet);
 
-    const  explanation=await generateCodeNarration(codeSnippet,language);
+    const  explanation=await generateCodeNarration(codeSnippet);
 
     let cleaned;
     try{
