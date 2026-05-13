@@ -1,6 +1,7 @@
 import { Code2, MessageSquare, Pause, Play, Upload, Volume2, VolumeX, Sparkles, Terminal, Code } from "lucide-react";
 import { useState, useCallback, useMemo } from "react";
 import TextToSpeech from "../Components/textToSpeech";
+import CodeInput from "../Components/CodeInput";
 
 // Types
 interface LineExplanation {
@@ -33,45 +34,45 @@ const DEFAULT_CODE = `function fibonacci(n: number): number {
 const result = fibonacci(10);
 console.log("Fibonacci of 10:", result);`;
 
-const MOCK_EXPLANATION_DATA: ExplanationData = {
-  explanation: {
-    narration: "The program begins its execution by initiating a call to the fibonacci function with the argument n = 10.",
-    line_map: [
-      {
-        line: 5,
-        text: "The program execution begins by calling the `fibonacci` function with `n=10`. This initiates the entire recursive computation."
-      },
-      {
-        line: 2,
-        text: "Inside the `fibonacci` function, this line checks if `n` is `10` or less. Since `10` is not less than or equal to `1`, the condition is false, and execution proceeds to the next line."
-      },
-      {
-        line: 3,
-        text: "The function recursively calls itself twice: first with `n-1` (i.e., `fibonacci(9)`) and then with `n-2` (i.e., `fibonacci(8)`). The execution of `fibonacci(10)` is paused until both sub-calls return their values."
-      },
-      {
-        line: 2,
-        text: "As the recursion deepens, calls like `fibonacci(1)` will eventually be made. Here, `n` is `1`. The condition `1 <= 1` is true, causing `fibonacci(1)` to directly return `1`."
-      },
-      {
-        line: 2,
-        text: "Similarly, calls like `fibonacci(0)` will occur. Here, `n` is `0`. The condition `0 <= 1` is true, causing `fibonacci(0)` to directly return `0`."
-      },
-      {
-        line: 3,
-        text: "Once base cases return, calls higher up the stack (e.g., `fibonacci(2)`) can resume. This line sums the returned values from its sub-calls (e.g., `fibonacci(1)` returning `1` and `fibonacci(0)` returning `0`) and returns their sum (`1 + 0 = 1`). This summation and return process continues up the call stack until the initial `fibonacci(10)` call receives its results."
-      },
-      {
-        line: 5,
-        text: "After the entire recursive calculation completes, the final result (`55`) is returned by `fibonacci(10)` and assigned to the `result` constant."
-      },
-      {
-        line: 6,
-        text: "Finally, the program logs the computed Fibonacci number, `55`, to the console."
-      }
-    ]
-  }
-};
+// const MOCK_EXPLANATION_DATA: ExplanationData = {
+//   explanation: {
+//     narration: "The program begins its execution by initiating a call to the fibonacci function with the argument n = 10.",
+//     line_map: [
+//       {
+//         line: 5,
+//         text: "The program execution begins by calling the `fibonacci` function with `n=10`. This initiates the entire recursive computation."
+//       },
+//       {
+//         line: 2,
+//         text: "Inside the `fibonacci` function, this line checks if `n` is `10` or less. Since `10` is not less than or equal to `1`, the condition is false, and execution proceeds to the next line."
+//       },
+//       {
+//         line: 3,
+//         text: "The function recursively calls itself twice: first with `n-1` (i.e., `fibonacci(9)`) and then with `n-2` (i.e., `fibonacci(8)`). The execution of `fibonacci(10)` is paused until both sub-calls return their values."
+//       },
+//       {
+//         line: 2,
+//         text: "As the recursion deepens, calls like `fibonacci(1)` will eventually be made. Here, `n` is `1`. The condition `1 <= 1` is true, causing `fibonacci(1)` to directly return `1`."
+//       },
+//       {
+//         line: 2,
+//         text: "Similarly, calls like `fibonacci(0)` will occur. Here, `n` is `0`. The condition `0 <= 1` is true, causing `fibonacci(0)` to directly return `0`."
+//       },
+//       {
+//         line: 3,
+//         text: "Once base cases return, calls higher up the stack (e.g., `fibonacci(2)`) can resume. This line sums the returned values from its sub-calls (e.g., `fibonacci(1)` returning `1` and `fibonacci(0)` returning `0`) and returns their sum (`1 + 0 = 1`). This summation and return process continues up the call stack until the initial `fibonacci(10)` call receives its results."
+//       },
+//       {
+//         line: 5,
+//         text: "After the entire recursive calculation completes, the final result (`55`) is returned by `fibonacci(10)` and assigned to the `result` constant."
+//       },
+//       {
+//         line: 6,
+//         text: "Finally, the program logs the computed Fibonacci number, `55`, to the console."
+//       }
+//     ]
+//   }
+// };
 
 export const MainContent: React.FC<MainContentProps> = () => {
   // State
@@ -118,6 +119,7 @@ export const MainContent: React.FC<MainContentProps> = () => {
         'Content-Type':'application/json'
       },
       body:JSON.stringify({
+        language,
         codeSnippet:code,
     })
   })
@@ -135,9 +137,7 @@ export const MainContent: React.FC<MainContentProps> = () => {
     
   }
 
-  const toggleMute = useCallback(() => {
-    setIsMuted(prev => !prev);
-  }, []);
+ 
 
   const toggleAskDialog = useCallback(() => {
     setShowAskDialog(prev => !prev);
@@ -237,24 +237,7 @@ export const MainContent: React.FC<MainContentProps> = () => {
             <div className="p-6">
               <div className="grid lg:grid-cols-2 gap-6 mb-6 items-stretch">
                 {/* Input Code */}
-                <div className="flex flex-col h-full">
-                  <label className="text-neutral-300 text-sm mb-3 font-semibold flex items-center gap-2">
-                    <Code2 size={16} className="text-amber-400" />
-                    Your Code
-                  </label>
-                  <div className="relative flex-1 group min-h-0">
-                    <textarea
-                      value={code}
-                      onChange={(e) => setCode(e.target.value)}
-                      placeholder={`// Paste your ${language} code here...\nfunction example() {\n  return "Hello World";\n}`}
-                      className="w-full h-[710px] bg-neutral-950/90 text-neutral-200 border border-neutral-800/50 rounded-xl px-4 py-4 font-mono text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/40 resize-none transition-all placeholder:text-neutral-600"
-                      spellCheck="false"
-                    />
-                    {/* Line numbers effect */}
-                    <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-neutral-900/50 to-transparent pointer-events-none rounded-l-xl" />
-                  </div>
-                </div>
-
+                <CodeInput code={code} setCode={setCode} language={language} />
                 {/* Explanation Output */}
                 {(
                   <div className="flex flex-col animate-slideIn">
@@ -286,13 +269,7 @@ export const MainContent: React.FC<MainContentProps> = () => {
                   <span>{isExplaining ? 'Pause Explanation' : 'Start Voice Explanation'}</span>
                 </button>
 
-                <button
-                  onClick={toggleMute}
-                  className="bg-neutral-800 hover:bg-neutral-750 text-neutral-200 px-6 py-3 rounded-lg transition-all flex items-center gap-2.5 shadow-lg border border-neutral-700/50 hover:border-neutral-600/50"
-                >
-                  {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-                  <span>{isMuted ? 'Unmute' : 'Mute'}</span>
-                </button>
+             
 
                 <button
                   onClick={toggleAskDialog}

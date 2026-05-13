@@ -32,22 +32,61 @@ function TextToSpeech({
   
   const shouldContinueRef = useRef(false);
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const currentIndexRef = useRef(0);       // ← mirrors currentExplanationIndex for use inside closures
+  const rateRef = useRef(1);               // ← mirrors rate for live rate changes inside closures
+  
+  // ── Per-line DOM refs for auto-scroll ────────────────────────────────────
+  const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const codeLines = code ? code.split('\n') : [];
 
-  // Get current text to speak
+  // Keep lineRefs array sized correctly when code changes
+  useEffect(() => {
+    lineRefs.current = lineRefs.current.slice(0, codeLines.length);
+  }, [codeLines.length]);
+
+  // Auto-scroll to active line whenever currentLine changes
+  useEffect(() => {
+    if (currentLine == null || currentLine === 0) return;
+    const el = lineRefs.current[currentLine - 1]; // currentLine is 1-based
+    if (el) {
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }, [currentLine]);
+
+  // Keep rateRef in sync so speakLine closures always read the latest value
+  useEffect(() => {
+    rateRef.current = rate;
+  }, [rate]);
+
+  // ── Live rate change: restart current utterance at new speed ─────────────
+  const handleRateChange = (newRate: number) => {
+    setRate(newRate);
+    rateRef.current = newRate;
+
+    // Only restart if currently speaking (not paused, not stopped)
+    if (!isPlaying || isPaused) return;
+    if (!window.speechSynthesis.speaking) return;
+
+    // Cancel current utterance and re-speak from same index
+    window.speechSynthesis.cancel();
+    setTimeout(() => {
+      if (shouldContinueRef.current) {
+        speakLine(currentIndexRef.current);
+      }
+    }, 80);
+  };
+
   const getCurrentText = () => {
     if (!explanationData) return '';
-    
     if (isLineByLine && explanationData.explanation.line_map.length > 0) {
       return explanationData.explanation.line_map[currentExplanationIndex]?.text || '';
     }
     return explanationData.explanation.narration;
   };
 
-  // Speak a specific line
   const speakLine = (index: number) => {
     if (!explanationData) return;
     
-    // Cancel any ongoing speech
     window.speechSynthesis.cancel();
     
     const text = isLineByLine 
@@ -57,46 +96,41 @@ function TextToSpeech({
     if (!text) return;
     
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = rate;
+    utterance.rate = rateRef.current;   // ← always use ref, not stale closure value
     utterance.pitch = 1;
     utterance.volume = 1;
     utterance.lang = 'en-US';
     
     utterance.onstart = () => {
-      console.log('Started speaking line:', index);
       if (isLineByLine && explanationData.explanation.line_map[index]) {
         const lineData = explanationData.explanation.line_map[index];
-        setCurrentLine(lineData.line - 1);
+        setCurrentLine(lineData.line);   // 1-based, matches idx+1 in renderer
       }
     };
     
     utterance.onend = () => {
-      console.log('Finished speaking line:', index);
-      
       if (isLineByLine && shouldContinueRef.current && explanationData) {
         const nextIndex = index + 1;
         if (nextIndex < explanationData.explanation.line_map.length) {
-          // Move to next line and speak it
-          console.log('Moving to next line:', nextIndex);
           setCurrentExplanationIndex(nextIndex);
-          // Speak next line immediately
+          currentIndexRef.current = nextIndex;
           setTimeout(() => speakLine(nextIndex), 50);
         } else {
-          // Finished all lines
-          console.log('Finished all lines');
           setIsPlaying(false);
           shouldContinueRef.current = false;
           setCurrentExplanationIndex(0);
+          currentIndexRef.current = 0;
           setCurrentLine(0);
         }
       } else if (!isLineByLine) {
-        // Full narration ended
         setIsPlaying(false);
         shouldContinueRef.current = false;
       }
     };
     
     utterance.onerror = (event) => {
+      // 'interrupted' fires when we cancel intentionally (rate change, skip) — ignore it
+      if (event.error === 'interrupted') return;
       console.error('Speech error:', event);
       setIsPlaying(false);
       shouldContinueRef.current = false;
@@ -108,21 +142,15 @@ function TextToSpeech({
 
   const handlePlayPause = () => {
     if (!isPlaying) {
-      // Start playing
-      console.log('Starting playback from index:', currentExplanationIndex);
       shouldContinueRef.current = true;
       setIsPlaying(true);
       setIsPaused(false);
       speakLine(currentExplanationIndex);
     } else if (window.speechSynthesis.speaking && !isPaused) {
-      // Pause
-      console.log('Pausing');
       window.speechSynthesis.pause();
       setIsPaused(true);
       shouldContinueRef.current = false;
     } else if (isPaused) {
-      // Resume
-      console.log('Resuming');
       window.speechSynthesis.resume();
       setIsPaused(false);
       shouldContinueRef.current = true;
@@ -130,64 +158,58 @@ function TextToSpeech({
   };
 
   const handleStop = () => {
-    console.log('Stopping');
     shouldContinueRef.current = false;
     setIsPlaying(false);
     setIsPaused(false);
     window.speechSynthesis.cancel();
     setCurrentExplanationIndex(0);
+    currentIndexRef.current = 0;
     setCurrentLine(0);
   };
 
   const handleNext = () => {
     if (!explanationData || !isLineByLine) return;
-    
     const nextIndex = currentExplanationIndex + 1;
     if (nextIndex < explanationData.explanation.line_map.length) {
       const wasPlaying = shouldContinueRef.current;
       window.speechSynthesis.cancel();
       setCurrentExplanationIndex(nextIndex);
-      
+      currentIndexRef.current = nextIndex;
       if (wasPlaying) {
         setTimeout(() => speakLine(nextIndex), 100);
       } else {
-        // Just update the highlight
-        setCurrentLine(explanationData.explanation.line_map[nextIndex].line - 1);
+        setCurrentLine(explanationData.explanation.line_map[nextIndex].line);
       }
     }
   };
 
   const handlePrevious = () => {
     if (!explanationData || !isLineByLine) return;
-    
     const prevIndex = currentExplanationIndex - 1;
     if (prevIndex >= 0) {
       const wasPlaying = shouldContinueRef.current;
       window.speechSynthesis.cancel();
       setCurrentExplanationIndex(prevIndex);
-      
+      currentIndexRef.current = prevIndex;
       if (wasPlaying) {
         setTimeout(() => speakLine(prevIndex), 100);
       } else {
-        // Just update the highlight
-        setCurrentLine(explanationData.explanation.line_map[prevIndex].line - 1);
+        setCurrentLine(explanationData.explanation.line_map[prevIndex].line);
       }
     }
   };
 
   const handleLineClick = (idx: number) => {
-    setCurrentLine(idx);
+    setCurrentLine(idx + 1);  // store 1-based
     if (isLineByLine && explanationData) {
-      const lineMap = explanationData.explanation.line_map.find(l => l.line - 1 === idx);
+      const lineMap = explanationData.explanation.line_map.find(l => l.line === idx + 1);
       if (lineMap) {
         const mapIndex = explanationData.explanation.line_map.indexOf(lineMap);
         const wasPlaying = shouldContinueRef.current;
         window.speechSynthesis.cancel();
         setCurrentExplanationIndex(mapIndex);
-        
-        if (wasPlaying) {
-          setTimeout(() => speakLine(mapIndex), 100);
-        }
+        currentIndexRef.current = mapIndex;
+        if (wasPlaying) setTimeout(() => speakLine(mapIndex), 100);
       }
     }
   };
@@ -199,14 +221,12 @@ function TextToSpeech({
     setIsPaused(false);
     setIsLineByLine(!isLineByLine);
     setCurrentExplanationIndex(0);
+    currentIndexRef.current = 0;
     setCurrentLine(0);
   };
 
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      window.speechSynthesis.cancel();
-    };
+    return () => { window.speechSynthesis.cancel(); };
   }, []);
 
   return (
@@ -229,7 +249,6 @@ function TextToSpeech({
           </div>
         </div>
 
-        {/* Playback Controls */}
         <div className="flex items-center gap-3 mb-4">
           {isLineByLine && (
             <button
@@ -270,20 +289,21 @@ function TextToSpeech({
           )}
 
           <div className="flex-1 flex items-center gap-3 ml-4">
-            <label className="text-xs text-purple-300 whitespace-nowrap">Speed: {rate.toFixed(1)}x</label>
+            <label className="text-xs text-purple-300 whitespace-nowrap">
+              Speed: {rate.toFixed(1)}x
+            </label>
             <input
               type="range"
               min="0.5"
               max="2"
               step="0.1"
               value={rate}
-              onChange={(e) => setRate(parseFloat(e.target.value))}
+              onChange={(e) => handleRateChange(parseFloat(e.target.value))}  // ← live handler
               className="flex-1 h-2 bg-purple-900/30 rounded-lg appearance-none cursor-pointer accent-purple-500"
             />
           </div>
         </div>
 
-        {/* Status Indicator */}
         <div className="flex items-center gap-2 mb-3">
           <div className={`w-2 h-2 rounded-full ${isPlaying && !isPaused ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`}></div>
           <span className="text-xs text-purple-300">
@@ -296,7 +316,6 @@ function TextToSpeech({
           )}
         </div>
 
-        {/* Current Text Display */}
         <div className="bg-[#0a1929] border border-cyan-500/30 rounded-lg p-3">
           <div className="text-xs text-purple-400 mb-1">
             {isLineByLine && explanationData 
@@ -318,11 +337,12 @@ function TextToSpeech({
         <div className="w-full h-96 bg-[#0a1929] border border-cyan-500/30 rounded-lg px-4 py-3 overflow-y-auto shadow-inner">
           {code ? (
             <div className="font-mono text-sm">
-              {code.split('\n').map((line, idx) => (
+              {codeLines.map((line, idx) => (
                 <div
                   key={idx}
+                  ref={el => { lineRefs.current[idx] = el; }}  // ← assign ref per row
                   className={`py-1 px-2 rounded transition-all cursor-pointer hover:bg-cyan-500/10 ${
-                    currentLine === idx ? 'bg-cyan-500/20 border-l-4 border-cyan-400' : ''
+                    currentLine === idx + 1 ? 'bg-cyan-500/20 border-l-4 border-cyan-400' : ''  // ← 1-based comparison
                   }`}
                   onClick={() => handleLineClick(idx)}
                 >

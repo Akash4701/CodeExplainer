@@ -22,7 +22,11 @@ const port=process.env.PORT|| 3000;
 
    //routes import
    import explainRoute from './src/router/explain.route.js';
+   import formatRoute from './src/router/explain.route.js';
+   
+   
 
    app.use('/api/v1',explainRoute)
+   app.use('/api/v1',formatRoute)
 
 
