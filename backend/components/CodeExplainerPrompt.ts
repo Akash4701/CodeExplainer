@@ -26,7 +26,7 @@ even if it jumps between non-consecutive lines.
 Return the result STRICTLY as valid JSON in this EXACT format:
 
 {
-  "narration": "A clear, story-like explanation of how the program runs from start to finish, describing the execution flow step-by-step.",
+  
   "line_map": [
     {
       "line": number,

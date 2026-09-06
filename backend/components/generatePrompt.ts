@@ -1,37 +1,37 @@
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
-;
 import { buildCodeNarrationPrompt } from './CodeExplainerPrompt.js';
 import { buildFormatCodePrompt } from './CodeFormatterPrompt.js';
+import { getGeminiClient } from './getGeminiClient.js';
 
 export async function generateCodeNarration(
   code: string,
   language: string,
-  format : Boolean=false
-  
+  format: Boolean = false,
+  apiKey?: string
+
 ): Promise<string> {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  const genAI = getGeminiClient(apiKey);
 
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash"
   });
 
-  const finalPrompt = format?
-  buildFormatCodePrompt({
-    code,
-    language,
-    indentStyle:"space",
-    quoteStyle:"double",
-    printWidth:80,
-    stripBlankLines:true
-  }):
-  buildCodeNarrationPrompt(code,language);
+  const finalPrompt = format ?
+    buildFormatCodePrompt({
+      code,
+      language,
+      indentStyle: "space",
+      quoteStyle: "double",
+      printWidth: 80,
+      stripBlankLines: true
+    }) :
+    buildCodeNarrationPrompt(code, language);
 
   const result = await model.generateContent(finalPrompt);
 
-  
 
-let fullResponse = result.response.text();
+
+  let fullResponse = result.response.text();
 
   return fullResponse;
 }
@@ -39,9 +39,10 @@ let fullResponse = result.response.text();
 // Alternative: Return as a stream for real-time processing
 export async function* generateCodeNarrationStream(
   code: string,
-  language: string
+  language: string,
+  apiKey?: string
 ): AsyncGenerator<string, void, unknown> {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  const genAI = getGeminiClient(apiKey);
 
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash-latest",

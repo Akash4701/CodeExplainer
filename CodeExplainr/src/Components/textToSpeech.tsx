@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Play, Pause, Square, Volume2, FastForward, Rewind } from 'lucide-react';
+import { MessageSquare, Play, Pause, Square, Volume2, FastForward, Rewind, MessageCircle, Mic, Search, Loader2, VolumeX } from 'lucide-react';
 
 interface LineExplanation {
   line: number;
@@ -8,33 +8,55 @@ interface LineExplanation {
 
 interface ExplanationData {
   explanation: {
-    narration: string;
     line_map: LineExplanation[];
   };
 }
 
-function TextToSpeech({ 
-  code, 
-  currentLine, 
+type SpeechRecognitionLike = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: { results: { [index: number]: { [index: number]: { transcript: string } } } }) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+};
+
+function TextToSpeech({
+  code,
+  language,
+  apiKey,
+  currentLine,
   setCurrentLine,
-  explanationData 
-}: { 
-  code: string; 
-  currentLine: number | null; 
+  explanationData
+}: {
+  code: string;
+  language: string;
+  apiKey: string;
+  currentLine: number | null;
   setCurrentLine: (line: number) => void;
   explanationData: ExplanationData | null;
 }) {
-  const [isLineByLine, setIsLineByLine] = useState(true);
+
   const [currentExplanationIndex, setCurrentExplanationIndex] = useState(0);
   const [rate, setRate] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  
+  const [questionLineIndex, setQuestionLineIndex] = useState<number | null>(null);
+  const [questionFormLineIndex, setQuestionFormLineIndex] = useState<number | null>(null);
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [isAnswering, setIsAnswering] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [answerVoiceEnabled, setAnswerVoiceEnabled] = useState(true);
+
   const shouldContinueRef = useRef(false);
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const currentIndexRef = useRef(0);       // ← mirrors currentExplanationIndex for use inside closures
   const rateRef = useRef(1);               // ← mirrors rate for live rate changes inside closures
-  
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+
   // ── Per-line DOM refs for auto-scroll ────────────────────────────────────
   const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
   const codeLines = code ? code.split('\n') : [];
@@ -58,6 +80,13 @@ function TextToSpeech({
     rateRef.current = rate;
   }, [rate]);
 
+  // Keep the question action beside the line currently being narrated.
+  useEffect(() => {
+    if (isPlaying && currentLine !== null && currentLine > 0) {
+      setQuestionLineIndex(currentLine - 1);
+    }
+  }, [currentLine, isPlaying]);
+
   // ── Live rate change: restart current utterance at new speed ─────────────
   const handleRateChange = (newRate: number) => {
     setRate(newRate);
@@ -78,38 +107,37 @@ function TextToSpeech({
 
   const getCurrentText = () => {
     if (!explanationData) return '';
-    if (isLineByLine && explanationData.explanation.line_map.length > 0) {
+    if (explanationData.explanation.line_map.length > 0) {
       return explanationData.explanation.line_map[currentExplanationIndex]?.text || '';
     }
-    return explanationData.explanation.narration;
+   
   };
 
   const speakLine = (index: number) => {
     if (!explanationData) return;
-    
+
     window.speechSynthesis.cancel();
-    
-    const text = isLineByLine 
-      ? explanationData.explanation.line_map[index]?.text 
-      : explanationData.explanation.narration;
-    
+
+    const text = explanationData.explanation.line_map[index]?.text
+
+
     if (!text) return;
-    
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = rateRef.current;   // ← always use ref, not stale closure value
     utterance.pitch = 1;
     utterance.volume = 1;
     utterance.lang = 'en-US';
-    
+
     utterance.onstart = () => {
-      if (isLineByLine && explanationData.explanation.line_map[index]) {
+      if (explanationData.explanation.line_map[index]) {
         const lineData = explanationData.explanation.line_map[index];
         setCurrentLine(lineData.line);   // 1-based, matches idx+1 in renderer
       }
     };
-    
+
     utterance.onend = () => {
-      if (isLineByLine && shouldContinueRef.current && explanationData) {
+      if (shouldContinueRef.current && explanationData) {
         const nextIndex = index + 1;
         if (nextIndex < explanationData.explanation.line_map.length) {
           setCurrentExplanationIndex(nextIndex);
@@ -122,12 +150,9 @@ function TextToSpeech({
           currentIndexRef.current = 0;
           setCurrentLine(0);
         }
-      } else if (!isLineByLine) {
-        setIsPlaying(false);
-        shouldContinueRef.current = false;
       }
     };
-    
+
     utterance.onerror = (event) => {
       // 'interrupted' fires when we cancel intentionally (rate change, skip) — ignore it
       if (event.error === 'interrupted') return;
@@ -135,7 +160,7 @@ function TextToSpeech({
       setIsPlaying(false);
       shouldContinueRef.current = false;
     };
-    
+
     currentUtteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
   };
@@ -168,7 +193,7 @@ function TextToSpeech({
   };
 
   const handleNext = () => {
-    if (!explanationData || !isLineByLine) return;
+    if (!explanationData) return;
     const nextIndex = currentExplanationIndex + 1;
     if (nextIndex < explanationData.explanation.line_map.length) {
       const wasPlaying = shouldContinueRef.current;
@@ -184,7 +209,7 @@ function TextToSpeech({
   };
 
   const handlePrevious = () => {
-    if (!explanationData || !isLineByLine) return;
+    if (!explanationData) return;
     const prevIndex = currentExplanationIndex - 1;
     if (prevIndex >= 0) {
       const wasPlaying = shouldContinueRef.current;
@@ -201,7 +226,10 @@ function TextToSpeech({
 
   const handleLineClick = (idx: number) => {
     setCurrentLine(idx + 1);  // store 1-based
-    if (isLineByLine && explanationData) {
+    setQuestionLineIndex(idx);
+    setQuestionFormLineIndex(null);
+    setAnswer('');
+    if (explanationData) {
       const lineMap = explanationData.explanation.line_map.find(l => l.line === idx + 1);
       if (lineMap) {
         const mapIndex = explanationData.explanation.line_map.indexOf(lineMap);
@@ -214,56 +242,129 @@ function TextToSpeech({
     }
   };
 
-  const handleModeChange = () => {
-    shouldContinueRef.current = false;
-    window.speechSynthesis.cancel();
-    setIsPlaying(false);
-    setIsPaused(false);
-    setIsLineByLine(!isLineByLine);
-    setCurrentExplanationIndex(0);
-    currentIndexRef.current = 0;
-    setCurrentLine(0);
+  const handleAskClick = (idx: number) => {
+    setQuestionLineIndex(idx);
+    setQuestionFormLineIndex(idx);
+    setQuestion('');
+    setAnswer('');
+  };
+
+  const toggleAnswerVoice = () => {
+    if (answerVoiceEnabled) {
+      window.speechSynthesis.cancel();
+    }
+    setAnswerVoiceEnabled((enabled) => !enabled);
+  };
+
+  const toggleVoiceInput = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const speechWindow = window as Window & {
+      SpeechRecognition?: new () => SpeechRecognitionLike;
+      webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+    };
+    const Recognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+
+    if (!Recognition) {
+      setAnswer('Voice input is not supported in this browser.');
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript;
+      if (transcript) setQuestion((currentQuestion) => `${currentQuestion} ${transcript}`.trim());
+    };
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  };
+
+  const handleQuestionSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (questionLineIndex === null || !question.trim() || isAnswering) return;
+
+    const selectedLineNumber = questionLineIndex + 1;
+    const selectedLine = codeLines[questionLineIndex] ?? '';
+    const selectedExplanation = explanationData?.explanation.line_map.find(
+      (item) => item.line === selectedLineNumber,
+    )?.text ?? '';
+
+    setIsAnswering(true);
+    setAnswer('');
+    try {
+      const response = await fetch('http://localhost:3000/api/v1/answer-question', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          language,
+          lineNumber: selectedLineNumber,
+          lineCode: selectedLine,
+          existingExplanation: selectedExplanation,
+          question: question.trim(),
+          apiKey: apiKey.trim() || undefined,
+        }),
+      });
+      const data = await response.json() as { answer?: string; error?: string };
+      if (!response.ok) throw new Error(data.error ?? 'Unable to get an answer.');
+
+      const answerText = data.answer?.trim() || 'No answer was returned.';
+      setAnswer(answerText);
+      if (answerVoiceEnabled) {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(answerText));
+      }
+    } catch (error: unknown) {
+      setAnswer(error instanceof Error ? error.message : 'Unable to get an answer.');
+    } finally {
+      setIsAnswering(false);
+    }
   };
 
   useEffect(() => {
-    return () => { window.speechSynthesis.cancel(); };
+    return () => {
+      window.speechSynthesis.cancel();
+      recognitionRef.current?.stop();
+    };
   }, []);
 
   return (
     <div className="space-y-4">
       {/* Controls Section */}
-      <div className="bg-gradient-to-r from-purple-900/30 to-cyan-900/30 border border-purple-500/30 rounded-lg p-4">
+      <div className="rounded-xl border border-emerald-800/30 bg-emerald-950 p-4 shadow-lg shadow-emerald-950/10">
         <div className="flex items-center justify-between mb-4">
-          <label className="text-purple-300 text-sm font-semibold flex items-center">
+          <label className="flex items-center text-sm font-semibold text-emerald-200">
             <Volume2 size={16} className="mr-2" />
             Audio Controls
           </label>
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-purple-300">Mode:</label>
-            <button
-              onClick={handleModeChange}
-              className="text-xs bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 px-3 py-1 rounded transition-colors"
-            >
-              {isLineByLine ? 'Line-by-Line' : 'Full Narration'}
-            </button>
-          </div>
+
         </div>
 
         <div className="flex items-center gap-3 mb-4">
-          {isLineByLine && (
-            <button
-              onClick={handlePrevious}
-              disabled={currentExplanationIndex === 0}
-              className="bg-cyan-600/30 hover:bg-cyan-600/50 disabled:bg-gray-700/30 disabled:cursor-not-allowed text-cyan-200 p-2 rounded transition-colors"
-              title="Previous Line"
-            >
-              <Rewind size={20} />
-            </button>
-          )}
-          
+
+          <button
+            onClick={handlePrevious}
+            disabled={currentExplanationIndex === 0}
+            className="rounded bg-emerald-800 p-2 text-emerald-200 transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-800"
+            title="Previous Line"
+          >
+            <Rewind size={20} />
+          </button>
+
+
           <button
             onClick={handlePlayPause}
-            className="bg-purple-600/40 hover:bg-purple-600/60 text-purple-200 p-3 rounded-lg transition-colors flex-shrink-0"
+            className="flex-shrink-0 rounded-lg bg-lime-400 p-3 text-emerald-950 transition-colors hover:bg-lime-300"
             title={isPlaying && !isPaused ? 'Pause' : 'Play'}
           >
             {isPlaying && !isPaused ? <Pause size={24} /> : <Play size={24} />}
@@ -271,25 +372,23 @@ function TextToSpeech({
 
           <button
             onClick={handleStop}
-            className="bg-red-600/30 hover:bg-red-600/50 text-red-200 p-2 rounded transition-colors"
+            className="rounded bg-rose-900/60 p-2 text-rose-200 transition-colors hover:bg-rose-800"
             title="Stop"
           >
             <Square size={20} />
           </button>
 
-          {isLineByLine && explanationData && (
-            <button
-              onClick={handleNext}
-              disabled={currentExplanationIndex >= explanationData.explanation.line_map.length - 1}
-              className="bg-cyan-600/30 hover:bg-cyan-600/50 disabled:bg-gray-700/30 disabled:cursor-not-allowed text-cyan-200 p-2 rounded transition-colors"
-              title="Next Line"
-            >
-              <FastForward size={20} />
-            </button>
-          )}
+          <button
+            onClick={handleNext}
+            disabled={!explanationData || currentExplanationIndex >= explanationData.explanation.line_map.length - 1}
+            className="rounded bg-emerald-800 p-2 text-emerald-200 transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-800"
+            title="Next Line"
+          >
+            <FastForward size={20} />
+          </button>
 
           <div className="flex-1 flex items-center gap-3 ml-4">
-            <label className="text-xs text-purple-300 whitespace-nowrap">
+            <label className="whitespace-nowrap text-xs text-emerald-300">
               Speed: {rate.toFixed(1)}x
             </label>
             <input
@@ -299,30 +398,30 @@ function TextToSpeech({
               step="0.1"
               value={rate}
               onChange={(e) => handleRateChange(parseFloat(e.target.value))}  // ← live handler
-              className="flex-1 h-2 bg-purple-900/30 rounded-lg appearance-none cursor-pointer accent-purple-500"
+              className="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-emerald-800 accent-lime-400"
             />
           </div>
         </div>
 
         <div className="flex items-center gap-2 mb-3">
           <div className={`w-2 h-2 rounded-full ${isPlaying && !isPaused ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`}></div>
-          <span className="text-xs text-purple-300">
+          <span className="text-xs text-emerald-300">
             {isPlaying && !isPaused ? 'Speaking...' : isPaused ? 'Paused' : 'Stopped'}
           </span>
-          {isLineByLine && explanationData && (
-            <span className="text-xs text-purple-400 ml-2">
+          {explanationData && (
+            <span className="ml-2 text-xs text-emerald-400">
               Line {currentExplanationIndex + 1} of {explanationData.explanation.line_map.length}
             </span>
           )}
         </div>
 
-        <div className="bg-[#0a1929] border border-cyan-500/30 rounded-lg p-3">
-          <div className="text-xs text-purple-400 mb-1">
-            {isLineByLine && explanationData 
-              ? `Line ${explanationData.explanation.line_map[currentExplanationIndex]?.line || 1} Explanation` 
+        <div className="rounded-lg border border-emerald-700/40 bg-[#163526] p-3">
+          <div className="mb-1 text-xs text-lime-300">
+            {explanationData
+              ? `Line ${explanationData.explanation.line_map[currentExplanationIndex]?.line || 1} Explanation`
               : 'Full Explanation'}
           </div>
-          <div className="text-cyan-300 text-sm leading-relaxed">
+          <div className="text-sm leading-relaxed text-emerald-100">
             {getCurrentText() || 'No explanation available'}
           </div>
         </div>
@@ -330,26 +429,83 @@ function TextToSpeech({
 
       {/* Code Display Section */}
       <div>
-        <label className="block text-purple-300 text-sm mb-2 font-semibold flex items-center">
+        <label className="mb-2 flex items-center text-sm font-semibold text-emerald-800">
           <MessageSquare size={16} className="mr-2" />
-          Code with Line-by-Line Navigation
+           Navigation of the flow of the Code
         </label>
-        <div className="w-full h-96 bg-[#0a1929] border border-cyan-500/30 rounded-lg px-4 py-3 overflow-y-auto shadow-inner">
+        <div className="h-96 w-full overflow-y-auto rounded-lg border border-emerald-900/30 bg-[#10251b] px-4 py-3 shadow-inner">
           {code ? (
             <div className="font-mono text-sm">
-              {codeLines.map((line, idx) => (
-                <div
-                  key={idx}
-                  ref={el => { lineRefs.current[idx] = el; }}  // ← assign ref per row
-                  className={`py-1 px-2 rounded transition-all cursor-pointer hover:bg-cyan-500/10 ${
-                    currentLine === idx + 1 ? 'bg-cyan-500/20 border-l-4 border-cyan-400' : ''  // ← 1-based comparison
-                  }`}
-                  onClick={() => handleLineClick(idx)}
-                >
-                  <span className="text-cyan-600 mr-4 select-none">{idx + 1}</span>
-                  <span className="text-cyan-300">{line || ' '}</span>
-                </div>
-              ))}
+              {codeLines.map((line, idx) => {
+                const isQuestionLine = isPlaying && questionLineIndex === idx;
+                const isQuestionFormOpen = questionFormLineIndex === idx;
+                return (
+                  <React.Fragment key={idx}>
+                    <div
+                      ref={el => { lineRefs.current[idx] = el; }}
+                      className={`flex cursor-pointer items-center gap-2 rounded px-2 py-1 transition-all hover:bg-emerald-800/50 ${currentLine === idx + 1 ? 'border-l-4 border-lime-400 bg-emerald-800/70' : ''}`}
+                      onClick={() => handleLineClick(idx)}
+                    >
+                      <span className="mr-2 select-none text-emerald-500">{idx + 1}</span>
+                      <span className="min-w-0 flex-1 text-emerald-100">{line || ' '}</span>
+                      {isQuestionLine && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleAskClick(idx);
+                          }}
+                          className="inline-flex shrink-0 items-center gap-1 rounded bg-lime-400 px-2 py-1 text-xs font-bold text-emerald-950 hover:bg-lime-300"
+                        >
+                          <MessageCircle size={13} /> Ask a question
+                        </button>
+                      )}
+                    </div>
+                    {isQuestionFormOpen && (
+                      <form onSubmit={handleQuestionSubmit} className="mb-2 ml-8 rounded-lg border border-emerald-700/50 bg-emerald-900/70 p-3">
+                        <p className="mb-2 text-xs text-lime-300">Question about line {idx + 1}</p>
+                        <div className="flex gap-2">
+                          <input
+                            value={question}
+                            onChange={(event) => setQuestion(event.target.value)}
+                            placeholder="Ask about this line..."
+                            className="min-w-0 flex-1 rounded border border-emerald-600/60 bg-emerald-950 px-3 py-2 text-sm text-white outline-none focus:border-lime-400"
+                            aria-label={`Question about line ${idx + 1}`}
+                          />
+                          <button
+                            type="button"
+                            onClick={toggleVoiceInput}
+                            className={`rounded p-2 text-lime-300 hover:bg-emerald-700 ${isListening ? 'bg-rose-700 text-white' : 'bg-emerald-800'}`}
+                            title={isListening ? 'Stop voice input' : 'Use voice input'}
+                          >
+                            <Mic size={18} />
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={!question.trim() || isAnswering}
+                            className="inline-flex items-center gap-1 rounded bg-lime-400 px-3 py-2 text-sm font-bold text-emerald-950 hover:bg-lime-300 disabled:cursor-not-allowed disabled:bg-slate-500 disabled:text-slate-300"
+                          >
+                            {isAnswering ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                            Get answer
+                          </button>
+                        </div>
+                        <div className="mt-3 flex items-start justify-between gap-3">
+                          {answer ? <p className="text-sm leading-relaxed text-emerald-100">{answer}</p> : <span />}
+                          <button
+                            type="button"
+                            onClick={toggleAnswerVoice}
+                            className="inline-flex shrink-0 items-center gap-1 rounded bg-emerald-800 px-2 py-1 text-xs text-emerald-100 hover:bg-emerald-700"
+                            title={answerVoiceEnabled ? 'Turn answer voice off' : 'Turn answer voice on'}
+                          >
+                            {answerVoiceEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                            {answerVoiceEnabled ? 'Voice on' : 'Voice off'}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
           ) : (
             <div className="text-gray-500 text-center mt-20">
