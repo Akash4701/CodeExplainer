@@ -1,88 +1,53 @@
-import { ChevronRight, Code2, FileCode, Github, Mail, MessageSquare, Twitter, Zap } from "lucide-react";
+import { Code2, Github, Linkedin, Mail } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="mt-auto border-t border-emerald-900/20 bg-[#10251b]">
-      <div className="container mx-auto px-4 sm:px-6 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          <div className="sm:col-span-2 lg:col-span-1">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="rounded-lg bg-emerald-500 p-2">
-                <Code2 className="text-white" size={20} />
-              </div>
-              <h3 className="text-white font-bold text-lg">CodeExplainer</h3>
+    <footer className="mt-auto border-t border-emerald-900/10 bg-[#e8f1e9] text-emerald-950">
+      <div className="container mx-auto px-4 py-10 sm:px-6 sm:py-12">
+        <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-lg">
+            <div className="mb-3 flex items-center gap-3">
+              <span className="rounded-md bg-emerald-800 p-2 text-white">
+                <Code2 size={19} />
+              </span>
+              <h2 className="text-lg font-bold">CodeExplainer</h2>
             </div>
-            <p className="mb-4 text-sm leading-relaxed text-emerald-200">
+            <p className="text-sm leading-relaxed text-emerald-950/70">
               A calmer way to understand unfamiliar code: listen, follow the flow, and learn as you go.
             </p>
-            <div className="flex items-center gap-3">
-              <button className="rounded-lg bg-emerald-900/70 p-2 transition-all group hover:bg-emerald-800">
-                <Github size={18} className="text-emerald-300 group-hover:text-lime-300" />
-              </button>
-              <button className="rounded-lg bg-emerald-900/70 p-2 transition-all group hover:bg-emerald-800">
-                <Twitter size={18} className="text-emerald-300 group-hover:text-lime-300" />
-              </button>
-              <button className="rounded-lg bg-emerald-900/70 p-2 transition-all group hover:bg-emerald-800">
-                <Mail size={18} className="text-emerald-300 group-hover:text-lime-300" />
-              </button>
-            </div>
+            <p className="mt-4 text-sm font-semibold">Made by Akash Saha</p>
           </div>
 
-          <div>
-            <h4 className="mb-4 flex items-center gap-2 font-semibold text-white">
-              <Zap size={16} className="text-lime-300" />
-              Features
-            </h4>
-            <ul className="space-y-2.5">
-              {['Voice Explanation', 'Interactive Q&A', 'Multi-Language', 'Code Summary'].map((item) => (
-                <li key={item} className="group flex cursor-pointer items-center gap-2 text-sm text-emerald-200 transition-colors hover:text-lime-300">
-                  <ChevronRight size={14} className="text-emerald-500 transition-transform group-hover:translate-x-1" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="mb-4 flex items-center gap-2 font-semibold text-white">
-              <FileCode size={16} className="text-lime-300" />
-              Resources
-            </h4>
-            <ul className="space-y-2.5">
-              {['Documentation', 'API Reference', 'Tutorials', 'Blog'].map((item) => (
-                <li key={item} className="group flex cursor-pointer items-center gap-2 text-sm text-emerald-200 transition-colors hover:text-lime-300">
-                  <ChevronRight size={14} className="text-emerald-500 transition-transform group-hover:translate-x-1" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="mb-4 flex items-center gap-2 font-semibold text-white">
-              <MessageSquare size={16} className="text-lime-300" />
-              Support
-            </h4>
-            <ul className="space-y-2.5">
-              {['Help Center', 'Community', 'Contact Us', 'Privacy Policy'].map((item) => (
-                <li key={item} className="group flex cursor-pointer items-center gap-2 text-sm text-emerald-200 transition-colors hover:text-lime-300">
-                  <ChevronRight size={14} className="text-emerald-500 transition-transform group-hover:translate-x-1" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
+          <nav aria-label="Connect with Akash Saha" className="flex flex-wrap gap-3">
+            <a
+              href="https://www.linkedin.com/in/akash-saha-270000351/"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-md border border-emerald-900/15 bg-white/70 px-4 py-2.5 text-sm font-semibold text-emerald-950 transition-colors hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+            >
+              <Linkedin size={17} /> LinkedIn
+            </a>
+            <a
+              href="https://github.com/Akash4701"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-md border border-emerald-900/15 bg-white/70 px-4 py-2.5 text-sm font-semibold text-emerald-950 transition-colors hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+            >
+              <Github size={17} /> GitHub
+            </a>
+            <a
+              href="mailto:saha.akash5909@gmail.com"
+              className="inline-flex items-center gap-2 rounded-md border border-emerald-900/15 bg-white/70 px-4 py-2.5 text-sm font-semibold text-emerald-950 transition-colors hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+            >
+              <Mail size={17} /> Email
+            </a>
+          </nav>
         </div>
 
-        <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-emerald-800/60 pt-8 sm:flex-row">
-          <p className="text-center text-sm text-emerald-300 sm:text-left">
+        <div className="mt-8 border-t border-emerald-900/15 pt-5">
+          <p className="text-xs text-emerald-950/60">
             © 2026 CodeExplainer. Built for clearer code.
           </p>
-          <div className="flex items-center gap-6 text-xs text-emerald-400">
-            <span className="cursor-pointer hover:text-lime-300">Terms</span>
-            <span className="cursor-pointer hover:text-lime-300">Privacy</span>
-            <span className="cursor-pointer hover:text-lime-300">Cookies</span>
-          </div>
         </div>
       </div>
     </footer>
