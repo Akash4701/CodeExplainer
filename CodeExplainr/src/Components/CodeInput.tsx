@@ -1,5 +1,6 @@
 import { Code2 } from 'lucide-react'
 import React, { useCallback, useRef, useState } from 'react'
+import { API_ENDPOINTS } from '../config/api'
 
 function CodeInput({ code, setCode, language, apiKey, isApiKeyValid }: { code: string, setCode: React.Dispatch<React.SetStateAction<string>>, language: string, apiKey?: string, isApiKeyValid: boolean }) {
 
@@ -13,7 +14,7 @@ function CodeInput({ code, setCode, language, apiKey, isApiKeyValid }: { code: s
     try {
       setLoading(true);
 
-      const res = await fetch('http://localhost:3000/api/v1/format-code', {
+      const res = await fetch(API_ENDPOINTS.formatCode, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

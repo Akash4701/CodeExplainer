@@ -3,6 +3,7 @@ import { useState, useCallback, useMemo } from "react";
 import TextToSpeech from "../Components/textToSpeech";
 import CodeInput from "../Components/CodeInput";
 import FeatureCard from "../Components/FeatureCardProps";
+import { API_ENDPOINTS } from "../config/api";
 
 // Types
 interface LineExplanation {
@@ -67,7 +68,7 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
     setKeyStatusMessage("Checking your API key...");
 
     try {
-      const response = await fetch("http://localhost:3000/api/v1/validate-api-key", {
+      const response = await fetch(API_ENDPOINTS.validateApiKey, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -119,7 +120,7 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
 
     if (!code.trim()) return;
     setIsExplaining(true);
-    fetch("http://localhost:3000/api/v1/explain", {
+    fetch(API_ENDPOINTS.explain, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

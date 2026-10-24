@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Play, Pause, Square, Volume2, FastForward, Rewind, MessageCircle, Mic, Search, Loader2, VolumeX } from 'lucide-react';
+import { API_ENDPOINTS } from '../config/api';
 
 interface LineExplanation {
   line: number;
@@ -327,7 +328,7 @@ function TextToSpeech({
     setIsAnswering(true);
     setAnswer('');
     try {
-      const response = await fetch('http://localhost:3000/api/v1/answer-question', {
+      const response = await fetch(API_ENDPOINTS.answerQuestion, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
