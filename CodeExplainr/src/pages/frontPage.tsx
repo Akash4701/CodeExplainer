@@ -1,4 +1,4 @@
-import { Code2, Upload, Sparkles, Terminal, Mic, Loader2, KeyRound, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
+import {  Upload, Sparkles, Terminal, Mic, Loader2, KeyRound, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
 import { useState, useCallback, useMemo } from "react";
 import TextToSpeech from "../Components/textToSpeech";
 import CodeInput from "../Components/CodeInput";
