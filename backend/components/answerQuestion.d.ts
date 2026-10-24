@@ -1,0 +1,2 @@
+export declare function answerCodeQuestion(code: string, language: string, lineNumber: number, lineCode: string, existingExplanation: string, question: string, apiKey?: string): Promise<string>;
+//# sourceMappingURL=answerQuestion.d.ts.map

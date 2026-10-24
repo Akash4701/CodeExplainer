@@ -1,0 +1,1 @@
+{"version":3,"file":"safeParse.js","sourceRoot":"","sources":["safeParse.ts"],"names":[],"mappings":"AAAA,MAAM,UAAU,SAAS,CAAC,IAAY;IACpC,IAAI,CAAC;QACH,OAAO,IAAI,CAAC,KAAK,CAAC,IAAI,CAAC,CAAC;IAC1B,CAAC;IAAC,MAAM,CAAC;QACP,MAAM,IAAI,KAAK,CAAC,cAAc,CAAC,CAAC;IAClC,CAAC;AACH,CAAC"}
