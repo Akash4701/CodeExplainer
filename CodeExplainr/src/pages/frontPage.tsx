@@ -16,7 +16,10 @@ interface ExplanationData {
   };
 }
 
-interface MainContentProps { }
+interface MainContentProps {
+  workspaceRef: React.RefObject<HTMLDivElement | null>;
+  featuresRef: React.RefObject<HTMLDivElement | null>;
+}
 
 // Constants
 const SUPPORTED_LANGUAGES = [
@@ -34,7 +37,7 @@ const DEFAULT_CODE = `function fibonacci(n: number): number {
 const result = fibonacci(10);
 console.log("Fibonacci of 10:", result);`;
 
-export const MainContent: React.FC<MainContentProps> = () => {
+export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, featuresRef }) => {
   // State
   const [language, setLanguage] = useState<string>("JavaScript");
   const [code, setCode] = useState<string>(DEFAULT_CODE);
@@ -48,6 +51,7 @@ export const MainContent: React.FC<MainContentProps> = () => {
 
   // Memoized values
   const isCodeEmpty = useMemo(() => !code.trim(), [code]);
+  const isApiKeyValid = keyStatus === "valid";
 
   const handleApiKeyTest = useCallback(async () => {
     const trimmedApiKey = apiKey.trim();
@@ -110,6 +114,7 @@ export const MainContent: React.FC<MainContentProps> = () => {
   }, []);
 
   const CodeExplanation = async (code: string) => {
+    if (!isApiKeyValid) return;
     console.log("Starting code explanation request", code);
 
     if (!code.trim()) return;
@@ -147,7 +152,7 @@ export const MainContent: React.FC<MainContentProps> = () => {
         <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-teal-200/20 blur-3xl sm:h-96 sm:w-96" />
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 lg:py-20 relative z-10">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-10 lg:py-8 relative z-10">
         {/* Hero Section */}
         <header className="text-center mb-10 sm:mb-14 lg:mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-50 border border-teal-200 mb-6">
@@ -167,7 +172,7 @@ export const MainContent: React.FC<MainContentProps> = () => {
 
           <p className="mx-auto max-w-2xl text-sm font-medium leading-relaxed text-slate-600 sm:text-base lg:text-lg">
             Turn unfamiliar code into a clear spoken walkthrough. Paste a snippet, choose its language,
-            and follow the logic line by line with natural voice narration.
+            and follow the code's flow with natural voice narration.
           </p>
         </header>
 
@@ -176,9 +181,51 @@ export const MainContent: React.FC<MainContentProps> = () => {
           <div className="overflow-hidden rounded-2xl border border-emerald-900/10 bg-white shadow-xl shadow-emerald-950/10">
             {/* Controls Header */}
             <div className="border-b border-emerald-900/10 bg-emerald-50/70 px-4 py-5 sm:px-6">
+              <div className="mt-5 rounded-xl border border-emerald-900/10 bg-white p-4 shadow-sm sm:p-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+                  <div className="flex-1">
+                    <label className="mb-2 flex items-center gap-2 text-sm font-bold text-emerald-950">
+                      <KeyRound size={17} className="text-emerald-600" />
+                      Bring your API key
+                    </label>
+                    <p className="mb-3 text-xs leading-relaxed text-slate-500">
+                      Add your key to use the explainer with your own quota. It stays in this browser session only.
+                    </p>
+                    <div className="relative">
+                      <input
+                        type="password"
+                        value={apiKey}
+                        onChange={(event) => {
+                          setApiKey(event.target.value);
+                          setKeyStatus("idle");
+                          setKeyStatusMessage("");
+                        }}
+                        placeholder="Paste your provider API key"
+                        className="w-full rounded-lg border border-emerald-900/20 bg-emerald-50/50 px-4 py-3 pr-11 text-sm text-emerald-950 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                        aria-label="API key"
+                      />
+                      <ShieldCheck size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500" />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleApiKeyTest}
+                    disabled={keyStatus === "testing"}
+                    className="rounded-lg bg-emerald-800 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
+                  >
+                    {keyStatus === "testing" ? "Testing..." : "Test API key"}
+                  </button>
+                </div>
+                {keyStatus !== "idle" && (
+                  <div className={`mt-3 flex items-center gap-2 text-sm font-semibold ${keyStatus === "valid" ? "text-emerald-700" : keyStatus === "testing" ? "text-slate-600" : "text-rose-600"}`}>
+                    {keyStatus === "valid" ? <CheckCircle2 size={17} /> : keyStatus === "testing" ? <Loader2 size={17} className="animate-spin" /> : <XCircle size={17} />}
+                    {keyStatusMessage}
+                  </div>
+                )}
+              </div>
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                 <div className="flex-1 min-w-[200px] w-full sm:w-auto sm:max-w-xs">
-                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-emerald-800">
+                  <label className="mt-4 mb-2 block text-xs font-bold uppercase tracking-wider text-emerald-800">
                     Language
                   </label>
                   <div className="relative">
@@ -224,60 +271,15 @@ export const MainContent: React.FC<MainContentProps> = () => {
                 </div>
               </div>
 
-              <div className="mt-5 rounded-xl border border-emerald-900/10 bg-white p-4 shadow-sm sm:p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
-                  <div className="flex-1">
-                    <label className="mb-2 flex items-center gap-2 text-sm font-bold text-emerald-950">
-                      <KeyRound size={17} className="text-emerald-600" />
-                      Bring your API key
-                    </label>
-                    <p className="mb-3 text-xs leading-relaxed text-slate-500">
-                      Add your key to use the explainer with your own quota. It stays in this browser session only.
-                    </p>
-                    <div className="relative">
-                      <input
-                        type="password"
-                        value={apiKey}
-                        onChange={(event) => {
-                          setApiKey(event.target.value);
-                          setKeyStatus("idle");
-                          setKeyStatusMessage("");
-                        }}
-                        placeholder="Paste your provider API key"
-                        className="w-full rounded-lg border border-emerald-900/20 bg-emerald-50/50 px-4 py-3 pr-11 text-sm text-emerald-950 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                        aria-label="API key"
-                      />
-                      <ShieldCheck size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500" />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleApiKeyTest}
-                    disabled={keyStatus === "testing"}
-                    className="rounded-lg bg-emerald-800 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
-                  >
-                    {keyStatus === "testing" ? "Testing..." : "Test API key"}
-                  </button>
-                </div>
-                {keyStatus !== "idle" && (
-                  <div className={`mt-3 flex items-center gap-2 text-sm font-semibold ${keyStatus === "valid" ? "text-emerald-700" : keyStatus === "testing" ? "text-slate-600" : "text-rose-600"}`}>
-                    {keyStatus === "valid" ? <CheckCircle2 size={17} /> : keyStatus === "testing" ? <Loader2 size={17} className="animate-spin" /> : <XCircle size={17} />}
-                    {keyStatusMessage}
-                  </div>
-                )}
-              </div>
+
             </div>
 
             {/* Code Editor Section */}
             <div className="p-4 sm:p-6">
-              <div className="grid lg:grid-cols-2 gap-6 mb-6 items-stretch">
+              <div ref={workspaceRef} className="grid scroll-mt-28 items-stretch gap-6 lg:grid-cols-2">
                 {/* Input Code */}
                 <div className="flex flex-col">
-                  <label className="mb-3 flex items-center gap-2 text-sm font-bold text-emerald-950">
-                    <Code2 size={16} className="text-emerald-600" />
-                    Your Code
-                  </label>
-                  <CodeInput code={code} setCode={setCode} language={language} apiKey={apiKey} />
+                  <CodeInput code={code} setCode={setCode} language={language} apiKey={apiKey} isApiKeyValid={isApiKeyValid} />
                 </div>
 
                 {/* Explanation Output */}
@@ -291,6 +293,7 @@ export const MainContent: React.FC<MainContentProps> = () => {
                       code={code}
                       language={language}
                       apiKey={apiKey}
+                      isApiKeyValid={isApiKeyValid}
                       currentLine={currentLine}
                       setCurrentLine={setCurrentLine}
                       explanationData={explanationData}
@@ -301,53 +304,65 @@ export const MainContent: React.FC<MainContentProps> = () => {
 
               {/* Action Controls */}
               <div className="flex flex-wrap gap-3 justify-center">
-                <button
-                  onClick={() => CodeExplanation(code)}
-                  disabled={isCodeEmpty}
-                  className="relative flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-lg bg-emerald-800 px-6 py-3 font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-700 hover:shadow-emerald-700/30 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none sm:w-auto"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                  {isExplaining ? (
-                    <Loader2 size={20} className="animate-spin" />
-                  ) : (
-                    <Mic size={20} />
+                <div className="group relative" title={!isApiKeyValid ? "Insert a valid Gemini API key" : undefined}>
+                  <button
+                    onClick={() => CodeExplanation(code)}
+                    disabled={isCodeEmpty || !isApiKeyValid || isExplaining}
+                    className="relative flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-lg bg-emerald-800 px-6 py-3 font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-700 hover:shadow-emerald-700/30 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none sm:w-auto"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                    {isExplaining ? (
+                      <Loader2 size={20} className="animate-spin" />
+                    ) : (
+                      <Mic size={20} />
+                    )}
+                    <span>{isExplaining ? "Explaining..." : "Start Voice Explanation"}</span>
+                  </button>
+                  {!isApiKeyValid && (
+                    <span role="tooltip" className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+                      Insert a valid Gemini API key
+                    </span>
                   )}
-                  <span>{isExplaining ? "Explaining..." : "Start Voice Explanation"}</span>
-                </button>
+                </div>
 
               </div>
             </div>
           </div>
 
-          {/* Feature Cards */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 mt-10 sm:mt-12 lg:mt-16">
-            <FeatureCard
-              icon={<Mic className="text-emerald-600" size={22} />}
-              emoji="🎙️"
-              title="Voice Narration"
-              description="Follow the logic line by line with a natural spoken walkthrough that keeps you oriented."
-              gradient="bg-gradient-to-br from-emerald-50 to-lime-50"
-              accent="border-emerald-200"
-            />
-
-            <FeatureCard
-              icon={<KeyRound className="text-emerald-600" size={22} />}
-              emoji="💬"
-              title="Use your API key"
-              description="Connect your own provider key, check its format, and keep control of your usage."
-              gradient="bg-gradient-to-br from-emerald-50 to-teal-50"
-              accent="border-emerald-200"
-            />
-
-            <FeatureCard
-              icon={<Code2 className="text-lime-700" size={22} />}
-              emoji="🌐"
-              title="Your code, your pace"
-              description="Switch languages, upload files, format snippets, and replay explanations whenever you need."
-              gradient="bg-gradient-to-br from-lime-50 to-emerald-50"
-              accent="border-lime-200"
-            />
-          </div>
+          <section ref={featuresRef} aria-labelledby="features-heading" className="scroll-mt-28 border-t border-emerald-900/10 py-12 sm:py-16">
+            <div className="mb-7 max-w-2xl">
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-emerald-700">Made for understanding</p>
+              <h2 id="features-heading" className="text-2xl font-extrabold text-emerald-950 sm:text-3xl">
+                More than a code formatter
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600 sm:text-base">
+                Move from reading unfamiliar code to following its logic, asking questions, and listening at your own pace.
+              </p>
+            </div>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <FeatureCard
+                icon={<Mic className="text-emerald-600" size={22} />}
+                title="Narration that follows the code"
+                description="Hear how each part connects as you follow the code's flow, with the active line highlighted to keep you oriented."
+                gradient="bg-gradient-to-br from-emerald-50 to-lime-50"
+                accent="border-emerald-200"
+              />
+              <FeatureCard
+                icon={<Sparkles className="text-teal-600" size={22} />}
+                title="Ask about a specific line"
+                description="Pause on a confusing part and ask a contextual question about that line and its explanation."
+                gradient="bg-gradient-to-br from-teal-50 to-cyan-50"
+                accent="border-teal-200"
+              />
+              <FeatureCard
+                icon={<KeyRound className="text-lime-700" size={22} />}
+                title="Your code, your Gemini key"
+                description="Bring your own key, choose from supported languages, and paste or upload the code you want to explore."
+                gradient="bg-gradient-to-br from-lime-50 to-emerald-50"
+                accent="border-lime-200"
+              />
+            </div>
+          </section>
         </div>
       </div>
     </main>

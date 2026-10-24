@@ -1,12 +1,14 @@
 import { Code2 } from 'lucide-react'
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useRef, useState } from 'react'
 
-function CodeInput({ code, setCode, language, apiKey }: { code: string, setCode: React.Dispatch<React.SetStateAction<string>>, language: string, apiKey?: string }) {
+function CodeInput({ code, setCode, language, apiKey, isApiKeyValid }: { code: string, setCode: React.Dispatch<React.SetStateAction<string>>, language: string, apiKey?: string, isApiKeyValid: boolean }) {
 
   const [loading, setLoading] = useState(false);
+  const isApiKeyValidRef = useRef(isApiKeyValid);
+  isApiKeyValidRef.current = isApiKeyValid;
 
   const formatCode = useCallback(async () => {
-    if (!code.trim()) return;
+    if (!isApiKeyValid || !code.trim()) return;
 
     try {
       setLoading(true);
@@ -20,13 +22,14 @@ function CodeInput({ code, setCode, language, apiKey }: { code: string, setCode:
       });
 
       const data = await res.json();
+      if (!isApiKeyValidRef.current) return;
       setCode(data.formattedCode);
     } catch (error) {
       console.error('Formatting failed:', error);
     } finally {
       setLoading(false);
     }
-  }, [apiKey, code, language, setCode]);
+  }, [apiKey, code, isApiKeyValid, language, setCode]);
 
   return (
     <div className="flex flex-col h-full">
@@ -35,12 +38,20 @@ function CodeInput({ code, setCode, language, apiKey }: { code: string, setCode:
           <Code2 size={16} className="text-emerald-600" />
           Your Code
         </label>
-        <button
-          onClick={formatCode}
-          className="ml-auto text-sm font-semibold text-emerald-600 transition-colors hover:text-emerald-800"
-        >
-          Format Code
-        </button>
+        <div className="group relative ml-auto" title={!isApiKeyValid ? "Insert a valid Gemini API key" : undefined}>
+          <button
+            onClick={formatCode}
+            disabled={!isApiKeyValid || loading}
+            className="text-sm font-semibold text-emerald-600 transition-colors hover:text-emerald-800 disabled:cursor-not-allowed disabled:text-slate-400"
+          >
+            Format Code
+          </button>
+          {!isApiKeyValid && (
+            <span role="tooltip" className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+              Insert a valid Gemini API key
+            </span>
+          )}
+        </div>
 
       </div>
 

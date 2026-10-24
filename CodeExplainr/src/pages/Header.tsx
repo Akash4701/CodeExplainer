@@ -1,9 +1,19 @@
 import { useState } from 'react';
 import { Code2, Sparkles, Terminal, ChevronRight } from 'lucide-react';
 
+interface HeaderProps {
+  onHowItWorks: () => void;
+  onFeatures: () => void;
+  onGetStarted: () => void;
+}
+
 // Header Component
-const Header = () => {
+const Header = ({ onHowItWorks, onFeatures, onGetStarted }: HeaderProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = (action: () => void) => {
+    setMobileMenuOpen(false);
+    action();
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-emerald-900/20 bg-[#10251b]/95 shadow-lg shadow-emerald-950/10 backdrop-blur-xl">
@@ -26,14 +36,14 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
-            <button className="flex items-center gap-1 text-sm font-medium text-emerald-100 transition-colors hover:text-lime-300 group">
+            <button onClick={onHowItWorks} className="flex items-center gap-1 text-sm font-medium text-emerald-100 transition-colors hover:text-lime-300 group">
               How It Works
               <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </button>
-            <button className="text-sm font-medium text-emerald-100 transition-colors hover:text-lime-300">
+            <button onClick={onFeatures} className="text-sm font-medium text-emerald-100 transition-colors hover:text-lime-300">
               Features
             </button>
-            <button className="rounded-lg bg-lime-400 px-5 py-2.5 text-sm font-bold text-emerald-950 shadow-lg shadow-lime-400/20 transition-all hover:scale-105 hover:bg-lime-300">
+            <button onClick={onGetStarted} className="rounded-lg bg-lime-400 px-5 py-2.5 text-sm font-bold text-emerald-950 shadow-lg shadow-lime-400/20 transition-all hover:scale-105 hover:bg-lime-300">
               Get Started
             </button>
           </nav>
@@ -50,13 +60,13 @@ const Header = () => {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="mt-4 space-y-3 border-t border-emerald-800/60 pt-4 pb-4 md:hidden">
-            <button className="block w-full text-left text-sm font-medium text-emerald-100 transition-colors hover:text-lime-300">
+            <button onClick={() => navigate(onHowItWorks)} className="block w-full text-left text-sm font-medium text-emerald-100 transition-colors hover:text-lime-300">
               How It Works
             </button>
-            <button className="block w-full text-left text-sm font-medium text-emerald-100 transition-colors hover:text-lime-300">
+            <button onClick={() => navigate(onFeatures)} className="block w-full text-left text-sm font-medium text-emerald-100 transition-colors hover:text-lime-300">
               Features
             </button>
-            <button className="w-full rounded-lg bg-lime-400 px-5 py-2.5 text-sm font-bold text-emerald-950 shadow-lg">
+            <button onClick={() => navigate(onGetStarted)} className="w-full rounded-lg bg-lime-400 px-5 py-2.5 text-sm font-bold text-emerald-950 shadow-lg">
               Get Started
             </button>
           </div>
