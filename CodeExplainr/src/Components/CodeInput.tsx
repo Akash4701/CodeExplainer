@@ -1,15 +1,13 @@
 import { Code2 } from 'lucide-react'
-import React, { useCallback, useRef, useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { API_ENDPOINTS } from '../config/api'
 
-function CodeInput({ code, setCode, language, apiKey, isApiKeyValid }: { code: string, setCode: React.Dispatch<React.SetStateAction<string>>, language: string, apiKey?: string, isApiKeyValid: boolean }) {
+function CodeInput({ code, setCode, language }: { code: string, setCode: React.Dispatch<React.SetStateAction<string>>, language: string }) {
 
   const [loading, setLoading] = useState(false);
-  const isApiKeyValidRef = useRef(isApiKeyValid);
-  isApiKeyValidRef.current = isApiKeyValid;
 
   const formatCode = useCallback(async () => {
-    if (!isApiKeyValid || !code.trim()) return;
+    if (!code.trim()) return;
 
     try {
       setLoading(true);
@@ -19,18 +17,17 @@ function CodeInput({ code, setCode, language, apiKey, isApiKeyValid }: { code: s
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ codeSnippet: code, language, apiKey: apiKey?.trim() || undefined }),
+        body: JSON.stringify({ codeSnippet: code, language }),
       });
 
       const data = await res.json();
-      if (!isApiKeyValidRef.current) return;
       setCode(data.formattedCode);
     } catch (error) {
       console.error('Formatting failed:', error);
     } finally {
       setLoading(false);
     }
-  }, [apiKey, code, isApiKeyValid, language, setCode]);
+  }, [code, language, setCode]);
 
   return (
     <div className="flex flex-col h-full">
@@ -39,19 +36,14 @@ function CodeInput({ code, setCode, language, apiKey, isApiKeyValid }: { code: s
           <Code2 size={16} className="text-emerald-600" />
           Your Code
         </label>
-        <div className="group relative ml-auto" title={!isApiKeyValid ? "Insert a valid Gemini API key" : undefined}>
+        <div className="ml-auto">
           <button
             onClick={formatCode}
-            disabled={!isApiKeyValid || loading}
+            disabled={loading || !code.trim()}
             className="text-sm font-semibold text-emerald-600 transition-colors hover:text-emerald-800 disabled:cursor-not-allowed disabled:text-slate-400"
           >
             Format Code
           </button>
-          {!isApiKeyValid && (
-            <span role="tooltip" className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
-              Insert a valid Gemini API key
-            </span>
-          )}
         </div>
 
       </div>

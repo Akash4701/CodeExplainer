@@ -1,7 +1,7 @@
 import { answerCodeQuestion } from "../../components/answerQuestion.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
 export const answerQuestion = asyncHandler(async (req, res) => {
-    const { code, language, lineNumber, lineCode, existingExplanation, question, apiKey } = req.body;
+    const { code, language, lineNumber, lineCode, existingExplanation, question } = req.body;
     if (typeof code !== "string" ||
         typeof language !== "string" ||
         typeof lineNumber !== "number" ||
@@ -14,7 +14,7 @@ export const answerQuestion = asyncHandler(async (req, res) => {
         return;
     }
     try {
-        const answer = await answerCodeQuestion(code, language, lineNumber, lineCode, typeof existingExplanation === "string" ? existingExplanation : "", question, typeof apiKey === "string" ? apiKey : undefined);
+        const answer = await answerCodeQuestion(code, language, lineNumber, lineCode, typeof existingExplanation === "string" ? existingExplanation : "", question);
         res.status(200).json({ answer });
     }
     catch (error) {

@@ -46,7 +46,7 @@ function validateLanguage(language: unknown): asserts language is string {
 // ─── Controller ───────────────────────────────────────────────────────────────
 export const formatCode = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { codeSnippet, language, apiKey } = req.body;
+    const { codeSnippet, language } = req.body;
 
     console.log("[formatCode] Received language :", language);
     console.log("[formatCode] Received snippet  :", codeSnippet?.slice?.(0, 120), "…");
@@ -63,7 +63,7 @@ export const formatCode = asyncHandler(
     // ── 2. Call the model (format = true) ────────────────────────────────────
     let raw: string;
     try {
-      raw = await generateCodeNarration(codeSnippet, language, true, apiKey);
+      raw = await generateCodeNarration(codeSnippet, language, true);
     } catch (err: any) {
       console.error("[formatCode] Model call failed:", err);
       res.status(502).json({

@@ -2,10 +2,10 @@ import { generateCodeNarration } from "../../components/generatePrompt.js";
 import { processGeminiOutput } from "../../components/processOutput.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
 export const explainCode = asyncHandler(async (req, res) => {
-    const { codeSnippet, language, apiKey } = req.body;
+    const { codeSnippet, language } = req.body;
     console.log('Recieved code', codeSnippet);
     console.log('Recieved language', language);
-    const explanation = await generateCodeNarration(codeSnippet, language, false, apiKey);
+    const explanation = await generateCodeNarration(codeSnippet, language);
     let cleaned;
     try {
         cleaned = processGeminiOutput(explanation);

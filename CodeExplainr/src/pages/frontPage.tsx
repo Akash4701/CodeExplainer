@@ -1,4 +1,4 @@
-import {  Upload, Sparkles, Terminal, Mic, Loader2, KeyRound, CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
+import { Upload, Sparkles, Terminal, Mic, Loader2, Code2 } from "lucide-react";
 import { useState, useCallback, useMemo } from "react";
 import TextToSpeech from "../Components/textToSpeech";
 import CodeInput from "../Components/CodeInput";
@@ -44,57 +44,11 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
   const [code, setCode] = useState<string>(DEFAULT_CODE);
   const [isExplaining, setIsExplaining] = useState<boolean>(false);
   const [currentLine, setCurrentLine] = useState<number | null>(null);
-  const [apiKey, setApiKey] = useState<string>(() => sessionStorage.getItem("codeexplainer-api-key") ?? "");
-  const [keyStatus, setKeyStatus] = useState<"idle" | "testing" | "valid" | "invalid">("idle");
-  const [keyStatusMessage, setKeyStatusMessage] = useState<string>("");
 
   const [explanationData, setExplanationData] = useState<ExplanationData | null>(null);
 
   // Memoized values
   const isCodeEmpty = useMemo(() => !code.trim(), [code]);
-  const isApiKeyValid = keyStatus === "valid";
-
-  const handleApiKeyTest = useCallback(async () => {
-    const trimmedApiKey = apiKey.trim();
-
-    if (!trimmedApiKey) {
-      setKeyStatus("invalid");
-      setKeyStatusMessage("Enter an API key to test.");
-      sessionStorage.removeItem("codeexplainer-api-key");
-      return;
-    }
-
-    setKeyStatus("testing");
-    setKeyStatusMessage("Checking your API key...");
-
-    try {
-      const response = await fetch(API_ENDPOINTS.validateApiKey, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ apiKey: trimmedApiKey }),
-      });
-      const data = await response.json() as {
-        message?: string;
-        error?: string;
-        details?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(data.error ?? data.details ?? "The API key could not be validated.");
-      }
-
-      setKeyStatus("valid");
-      setKeyStatusMessage(data.message ?? "Gemini API key is valid and available.");
-      sessionStorage.setItem("codeexplainer-api-key", trimmedApiKey);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "The API key could not be validated.";
-      setKeyStatus("invalid");
-      setKeyStatusMessage(message);
-      sessionStorage.removeItem("codeexplainer-api-key");
-    }
-  }, [apiKey]);
 
   // Handlers
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,7 +69,6 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
   }, []);
 
   const CodeExplanation = async (code: string) => {
-    if (!isApiKeyValid) return;
     console.log("Starting code explanation request", code);
 
     if (!code.trim()) return;
@@ -128,7 +81,6 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
       body: JSON.stringify({
         language,
         codeSnippet: code,
-        apiKey: apiKey.trim() || undefined,
       }),
     })
       .then((response) => response.json())
@@ -182,48 +134,6 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
           <div className="overflow-hidden rounded-2xl border border-emerald-900/10 bg-white shadow-xl shadow-emerald-950/10">
             {/* Controls Header */}
             <div className="border-b border-emerald-900/10 bg-emerald-50/70 px-4 py-5 sm:px-6">
-              <div className="mt-5 rounded-xl border border-emerald-900/10 bg-white p-4 shadow-sm sm:p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
-                  <div className="flex-1">
-                    <label className="mb-2 flex items-center gap-2 text-sm font-bold text-emerald-950">
-                      <KeyRound size={17} className="text-emerald-600" />
-                      Bring your API key
-                    </label>
-                    <p className="mb-3 text-xs leading-relaxed text-slate-500">
-                      Add your key to use the explainer with your own quota. It stays in this browser session only.
-                    </p>
-                    <div className="relative">
-                      <input
-                        type="password"
-                        value={apiKey}
-                        onChange={(event) => {
-                          setApiKey(event.target.value);
-                          setKeyStatus("idle");
-                          setKeyStatusMessage("");
-                        }}
-                        placeholder="Paste your provider API key"
-                        className="w-full rounded-lg border border-emerald-900/20 bg-emerald-50/50 px-4 py-3 pr-11 text-sm text-emerald-950 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                        aria-label="API key"
-                      />
-                      <ShieldCheck size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500" />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleApiKeyTest}
-                    disabled={keyStatus === "testing"}
-                    className="rounded-lg bg-emerald-800 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
-                  >
-                    {keyStatus === "testing" ? "Testing..." : "Test API key"}
-                  </button>
-                </div>
-                {keyStatus !== "idle" && (
-                  <div className={`mt-3 flex items-center gap-2 text-sm font-semibold ${keyStatus === "valid" ? "text-emerald-700" : keyStatus === "testing" ? "text-slate-600" : "text-rose-600"}`}>
-                    {keyStatus === "valid" ? <CheckCircle2 size={17} /> : keyStatus === "testing" ? <Loader2 size={17} className="animate-spin" /> : <XCircle size={17} />}
-                    {keyStatusMessage}
-                  </div>
-                )}
-              </div>
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                 <div className="flex-1 min-w-[200px] w-full sm:w-auto sm:max-w-xs">
                   <label className="mt-4 mb-2 block text-xs font-bold uppercase tracking-wider text-emerald-800">
@@ -280,7 +190,7 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
               <div ref={workspaceRef} className="grid scroll-mt-28 items-stretch gap-6 lg:grid-cols-2">
                 {/* Input Code */}
                 <div className="flex flex-col">
-                  <CodeInput code={code} setCode={setCode} language={language} apiKey={apiKey} isApiKeyValid={isApiKeyValid} />
+                  <CodeInput code={code} setCode={setCode} language={language} />
                 </div>
 
                 {/* Explanation Output */}
@@ -293,8 +203,6 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
                     <TextToSpeech
                       code={code}
                       language={language}
-                      apiKey={apiKey}
-                      isApiKeyValid={isApiKeyValid}
                       currentLine={currentLine}
                       setCurrentLine={setCurrentLine}
                       explanationData={explanationData}
@@ -305,10 +213,10 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
 
               {/* Action Controls */}
               <div className="flex flex-wrap gap-3 justify-center">
-                <div className="group relative" title={!isApiKeyValid ? "Insert a valid Gemini API key" : undefined}>
+                <div>
                   <button
                     onClick={() => CodeExplanation(code)}
-                    disabled={isCodeEmpty || !isApiKeyValid || isExplaining}
+                    disabled={isCodeEmpty || isExplaining}
                     className="relative flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-lg bg-emerald-800 px-6 py-3 font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-700 hover:shadow-emerald-700/30 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none sm:w-auto"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -319,11 +227,6 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
                     )}
                     <span>{isExplaining ? "Explaining..." : "Start Voice Explanation"}</span>
                   </button>
-                  {!isApiKeyValid && (
-                    <span role="tooltip" className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
-                      Insert a valid Gemini API key
-                    </span>
-                  )}
                 </div>
 
               </div>
@@ -340,7 +243,7 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
                 Move from reading unfamiliar code to following its logic, asking questions, and listening at your own pace.
               </p>
             </div>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-5 sm:grid-cols-2">
               <FeatureCard
                 icon={<Mic className="text-emerald-600" size={22} />}
                 title="Narration that follows the code"
@@ -356,9 +259,9 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
                 accent="border-teal-200"
               />
               <FeatureCard
-                icon={<KeyRound className="text-lime-700" size={22} />}
-                title="Your code, your Gemini key"
-                description="Bring your own key, choose from supported languages, and paste or upload the code you want to explore."
+                icon={<Code2 className="text-lime-700" size={22} />}
+                title="Your code, your language"
+                description="Choose from supported languages, then paste or upload the code you want to explore."
                 gradient="bg-gradient-to-br from-lime-50 to-emerald-50"
                 accent="border-lime-200"
               />

@@ -1,10 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export function getGeminiClient(apiKey?: string): GoogleGenerativeAI {
-  const key = apiKey?.trim();
+export function getGeminiClient(): GoogleGenerativeAI {
+  const key = process.env.GEMINI_API_KEY?.trim();
 
   if (!key) {
-    throw new Error("Gemini API key is missing");
+    throw new Error("GEMINI_API_KEY is not configured in the backend environment.");
   }
 
   return new GoogleGenerativeAI(key);

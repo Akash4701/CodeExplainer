@@ -17,10 +17,8 @@ app.listen(port, () => {
 });
 import explainRoute from './src/router/explain.route.js';
 import formatRoute from './src/router/format.route.js';
-import validateApiRoute from './src/router/validateApi.route.js';
 import questionRoute from './src/router/question.route.js';
 app.use('/api/v1', explainRoute);
 app.use('/api/v1', formatRoute);
-app.use('/api/v1', validateApiRoute);
 app.use('/api/v1', questionRoute);
 //# sourceMappingURL=index.js.map

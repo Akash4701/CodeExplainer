@@ -6,11 +6,10 @@ import { getGeminiClient } from './getGeminiClient.js';
 export async function generateCodeNarration(
   code: string,
   language: string,
-  format: Boolean = false,
-  apiKey?: string
+  format: Boolean = false
 
 ): Promise<string> {
-  const genAI = getGeminiClient(apiKey);
+  const genAI = getGeminiClient();
 
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash"
@@ -39,10 +38,9 @@ export async function generateCodeNarration(
 // Alternative: Return as a stream for real-time processing
 export async function* generateCodeNarrationStream(
   code: string,
-  language: string,
-  apiKey?: string
+  language: string
 ): AsyncGenerator<string, void, unknown> {
-  const genAI = getGeminiClient(apiKey);
+  const genAI = getGeminiClient();
 
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash-latest",

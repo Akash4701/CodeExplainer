@@ -1,6 +1,6 @@
 import { getGeminiClient } from "./getGeminiClient.js";
-export async function answerCodeQuestion(code, language, lineNumber, lineCode, existingExplanation, question, apiKey) {
-    const client = getGeminiClient(apiKey);
+export async function answerCodeQuestion(code, language, lineNumber, lineCode, existingExplanation, question) {
+    const client = getGeminiClient();
     const model = client.getGenerativeModel({ model: "gemini-2.5-flash" });
     const prompt = `
 You are a concise code tutor. Answer the user's question about the selected line.

@@ -1,24 +1,10 @@
-import { ArrowRight, CheckCircle2, Code2, ExternalLink, KeyRound, MessageCircle, Mic, Play, Sparkles, Volume2 } from "lucide-react";
+import { ArrowRight, Code2, MessageCircle, Mic, Play, Sparkles, Volume2 } from "lucide-react";
 
 interface WorkingProps {
     onGetStarted: () => void;
 }
 
 const steps = [
-    {
-        icon: <KeyRound size={18} />,
-        title: "Create a Gemini API key",
-        description: (
-            <>
-                Visit <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-lime-300 underline decoration-lime-300/40 underline-offset-4 hover:text-white">Google AI Studio <ExternalLink size={13} /></a>, create a key, and keep it private.
-            </>
-        ),
-    },
-    {
-        icon: <CheckCircle2 size={18} />,
-        title: "Paste it in and test it",
-        description: <>Enter your key in the workspace and select <strong className="text-white">Test API key</strong>. A valid status unlocks the AI-powered actions.</>,
-    },
     {
         icon: <Code2 size={18} />,
         title: "Add the code you want to understand",
@@ -52,7 +38,7 @@ function Working({ onGetStarted }: WorkingProps) {
                             How CodeExplainer works
                         </h2>
                         <p className="mt-3 max-w-xl text-sm leading-relaxed text-emerald-100/75 sm:text-base">
-                            Bring a Gemini key and a piece of code. Then listen, follow along, and dig into the lines that matter to you.
+                            Add a piece of code, then listen, follow along, and dig into the lines that matter to you.
                         </p>
 
                         <ol className="mt-9 border-l border-emerald-700/70">
@@ -85,7 +71,7 @@ function Working({ onGetStarted }: WorkingProps) {
                             Open the code workspace <ArrowRight size={17} />
                         </button>
                         <p className="mt-4 flex items-center gap-2 text-xs text-emerald-100/60">
-                            <Play size={13} /> Your key stays in this browser session.
+                            <Play size={13} /> Gemini credentials stay on the backend.
                         </p>
                     </aside>
                 </div>

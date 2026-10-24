@@ -10,6 +10,9 @@ Use `.env.example` as a starting point, and restart the Vite dev server after ch
 the environment file. Vite exposes `VITE_` variables in the browser, so do not put
 API keys or other secrets in this file.
 
+Configure `GEMINI_API_KEY` in `backend/.env` for the backend. Gemini requests use this
+server-side key; it is not entered in or sent from the frontend.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh

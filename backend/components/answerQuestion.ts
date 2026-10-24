@@ -7,9 +7,8 @@ export async function answerCodeQuestion(
   lineCode: string,
   existingExplanation: string,
   question: string,
-  apiKey?: string,
 ): Promise<string> {
-  const client = getGeminiClient(apiKey);
+  const client = getGeminiClient();
   const model = client.getGenerativeModel({ model: "gemini-2.5-flash" });
   const prompt = `
 You are a concise code tutor. Answer the user's question about the selected line.

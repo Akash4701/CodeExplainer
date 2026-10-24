@@ -4,7 +4,7 @@ import { asyncHandler } from "../utils/AsyncHandler.js";
 
 export const answerQuestion = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { code, language, lineNumber, lineCode, existingExplanation, question, apiKey } = req.body;
+    const { code, language, lineNumber, lineCode, existingExplanation, question } = req.body;
 
     if (
       typeof code !== "string" ||
@@ -28,7 +28,6 @@ export const answerQuestion = asyncHandler(
         lineCode,
         typeof existingExplanation === "string" ? existingExplanation : "",
         question,
-        typeof apiKey === "string" ? apiKey : undefined,
       );
 
       res.status(200).json({ answer });

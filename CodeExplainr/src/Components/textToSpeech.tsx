@@ -27,16 +27,12 @@ type SpeechRecognitionLike = {
 function TextToSpeech({
   code,
   language,
-  apiKey,
-  isApiKeyValid,
   currentLine,
   setCurrentLine,
   explanationData
 }: {
   code: string;
   language: string;
-  apiKey: string;
-  isApiKeyValid: boolean;
   currentLine: number | null;
   setCurrentLine: (line: number) => void;
   explanationData: ExplanationData | null;
@@ -59,23 +55,6 @@ function TextToSpeech({
   const currentIndexRef = useRef(0);       // ← mirrors currentExplanationIndex for use inside closures
   const rateRef = useRef(1);               // ← mirrors rate for live rate changes inside closures
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-  const isApiKeyValidRef = useRef(isApiKeyValid);
-  isApiKeyValidRef.current = isApiKeyValid;
-
-  useEffect(() => {
-    if (isApiKeyValid) return;
-
-    shouldContinueRef.current = false;
-    window.speechSynthesis.cancel();
-    recognitionRef.current?.stop();
-    setIsPlaying(false);
-    setIsPaused(false);
-    setIsListening(false);
-    setQuestionFormLineIndex(null);
-    setCurrentExplanationIndex(0);
-    currentIndexRef.current = 0;
-    setCurrentLine(0);
-  }, [isApiKeyValid, setCurrentLine]);
 
   // ── Per-line DOM refs for auto-scroll ────────────────────────────────────
   const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -109,7 +88,6 @@ function TextToSpeech({
 
   // ── Live rate change: restart current utterance at new speed ─────────────
   const handleRateChange = (newRate: number) => {
-    if (!isApiKeyValid) return;
     setRate(newRate);
     rateRef.current = newRate;
 
@@ -135,7 +113,7 @@ function TextToSpeech({
   };
 
   const speakLine = (index: number) => {
-    if (!isApiKeyValid || !explanationData) return;
+    if (!explanationData) return;
 
     window.speechSynthesis.cancel();
 
@@ -187,7 +165,7 @@ function TextToSpeech({
   };
 
   const handlePlayPause = () => {
-    if (!isApiKeyValid || !explanationData) return;
+    if (!explanationData) return;
     if (!isPlaying) {
       shouldContinueRef.current = true;
       setIsPlaying(true);
@@ -215,7 +193,7 @@ function TextToSpeech({
   };
 
   const handleNext = () => {
-    if (!isApiKeyValid || !explanationData) return;
+    if (!explanationData) return;
     const nextIndex = currentExplanationIndex + 1;
     if (nextIndex < explanationData.explanation.line_map.length) {
       const wasPlaying = shouldContinueRef.current;
@@ -231,7 +209,7 @@ function TextToSpeech({
   };
 
   const handlePrevious = () => {
-    if (!isApiKeyValid || !explanationData) return;
+    if (!explanationData) return;
     const prevIndex = currentExplanationIndex - 1;
     if (prevIndex >= 0) {
       const wasPlaying = shouldContinueRef.current;
@@ -247,7 +225,6 @@ function TextToSpeech({
   };
 
   const handleLineClick = (idx: number) => {
-    if (!isApiKeyValid) return;
     setCurrentLine(idx + 1);  // store 1-based
     setQuestionLineIndex(idx);
     setQuestionFormLineIndex(null);
@@ -266,7 +243,6 @@ function TextToSpeech({
   };
 
   const handleAskClick = (idx: number) => {
-    if (!isApiKeyValid) return;
     setQuestionLineIndex(idx);
     setQuestionFormLineIndex(idx);
     setQuestion('');
@@ -274,7 +250,6 @@ function TextToSpeech({
   };
 
   const toggleAnswerVoice = () => {
-    if (!isApiKeyValid) return;
     if (answerVoiceEnabled) {
       window.speechSynthesis.cancel();
     }
@@ -282,7 +257,6 @@ function TextToSpeech({
   };
 
   const toggleVoiceInput = () => {
-    if (!isApiKeyValid) return;
     if (isListening) {
       recognitionRef.current?.stop();
       setIsListening(false);
@@ -317,7 +291,7 @@ function TextToSpeech({
 
   const handleQuestionSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!isApiKeyValid || questionLineIndex === null || !question.trim() || isAnswering) return;
+    if (questionLineIndex === null || !question.trim() || isAnswering) return;
 
     const selectedLineNumber = questionLineIndex + 1;
     const selectedLine = codeLines[questionLineIndex] ?? '';
@@ -338,12 +312,10 @@ function TextToSpeech({
           lineCode: selectedLine,
           existingExplanation: selectedExplanation,
           question: question.trim(),
-          apiKey: apiKey.trim() || undefined,
         }),
       });
       const data = await response.json() as { answer?: string; error?: string };
       if (!response.ok) throw new Error(data.error ?? 'Unable to get an answer.');
-      if (!isApiKeyValidRef.current) return;
 
       const answerText = data.answer?.trim() || 'No answer was returned.';
       setAnswer(answerText);
@@ -377,16 +349,10 @@ function TextToSpeech({
 
         </div>
 
-        <div className="group relative flex items-center gap-3 mb-4" title={!isApiKeyValid ? "Insert a valid Gemini API key" : undefined}>
-          {!isApiKeyValid && (
-            <span role="tooltip" className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
-              Insert a valid Gemini API key
-            </span>
-          )}
-
+        <div className="flex items-center gap-3 mb-4">
           <button
             onClick={handlePrevious}
-            disabled={!isApiKeyValid || currentExplanationIndex === 0}
+            disabled={currentExplanationIndex === 0}
             className="rounded bg-emerald-800 p-2 text-emerald-200 transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-800"
             title="Previous Line"
           >
@@ -396,7 +362,7 @@ function TextToSpeech({
 
           <button
             onClick={handlePlayPause}
-            disabled={!isApiKeyValid || !explanationData}
+            disabled={!explanationData}
             className="flex-shrink-0 rounded-lg bg-lime-400 p-3 text-emerald-950 transition-colors hover:bg-lime-300 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-400"
             title={isPlaying && !isPaused ? 'Pause' : 'Play'}
           >
@@ -405,7 +371,6 @@ function TextToSpeech({
 
           <button
             onClick={handleStop}
-            disabled={!isApiKeyValid}
             className="rounded bg-rose-900/60 p-2 text-rose-200 transition-colors hover:bg-rose-800 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
             title="Stop"
           >
@@ -414,7 +379,7 @@ function TextToSpeech({
 
           <button
             onClick={handleNext}
-            disabled={!isApiKeyValid || !explanationData || currentExplanationIndex >= explanationData.explanation.line_map.length - 1}
+            disabled={!explanationData || currentExplanationIndex >= explanationData.explanation.line_map.length - 1}
             className="rounded bg-emerald-800 p-2 text-emerald-200 transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-800"
             title="Next Line"
           >
@@ -432,7 +397,6 @@ function TextToSpeech({
               step="0.1"
               value={rate}
               onChange={(e) => handleRateChange(parseFloat(e.target.value))}  // ← live handler
-              disabled={!isApiKeyValid}
               className="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-emerald-800 accent-lime-400"
             />
           </div>
@@ -483,7 +447,7 @@ function TextToSpeech({
                     >
                       <span className="mr-2 select-none text-emerald-500">{idx + 1}</span>
                       <span className="min-w-0 flex-1 text-emerald-100">{line || ' '}</span>
-                      {isQuestionLine && isApiKeyValid && (
+                      {isQuestionLine && (
                         <button
                           type="button"
                           onClick={(event) => {
@@ -496,14 +460,13 @@ function TextToSpeech({
                         </button>
                       )}
                     </div>
-                    {isQuestionFormOpen && isApiKeyValid && (
+                    {isQuestionFormOpen && (
                       <form onSubmit={handleQuestionSubmit} className="mb-2 ml-8 rounded-lg border border-emerald-700/50 bg-emerald-900/70 p-3">
                         <p className="mb-2 text-xs text-lime-300">Question about line {idx + 1}</p>
                         <div className="flex gap-2">
                           <input
                             value={question}
                             onChange={(event) => setQuestion(event.target.value)}
-                            disabled={!isApiKeyValid}
                             placeholder="Ask about this line..."
                             className="min-w-0 flex-1 rounded border border-emerald-600/60 bg-emerald-950 px-3 py-2 text-sm text-white outline-none focus:border-lime-400"
                             aria-label={`Question about line ${idx + 1}`}
@@ -511,7 +474,6 @@ function TextToSpeech({
                           <button
                             type="button"
                             onClick={toggleVoiceInput}
-                            disabled={!isApiKeyValid}
                             className={`rounded p-2 text-lime-300 hover:bg-emerald-700 ${isListening ? 'bg-rose-700 text-white' : 'bg-emerald-800'}`}
                             title={isListening ? 'Stop voice input' : 'Use voice input'}
                           >
@@ -519,7 +481,7 @@ function TextToSpeech({
                           </button>
                           <button
                             type="submit"
-                            disabled={!isApiKeyValid || !question.trim() || isAnswering}
+                            disabled={!question.trim() || isAnswering}
                             className="inline-flex items-center gap-1 rounded bg-lime-400 px-3 py-2 text-sm font-bold text-emerald-950 hover:bg-lime-300 disabled:cursor-not-allowed disabled:bg-slate-500 disabled:text-slate-300"
                           >
                             {isAnswering ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
@@ -531,7 +493,6 @@ function TextToSpeech({
                           <button
                             type="button"
                             onClick={toggleAnswerVoice}
-                            disabled={!isApiKeyValid}
                             className="inline-flex shrink-0 items-center gap-1 rounded bg-emerald-800 px-2 py-1 text-xs text-emerald-100 hover:bg-emerald-700"
                             title={answerVoiceEnabled ? 'Turn answer voice off' : 'Turn answer voice on'}
                           >

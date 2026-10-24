@@ -1,8 +1,8 @@
 import { buildCodeNarrationPrompt } from './CodeExplainerPrompt.js';
 import { buildFormatCodePrompt } from './CodeFormatterPrompt.js';
 import { getGeminiClient } from './getGeminiClient.js';
-export async function generateCodeNarration(code, language, format = false, apiKey) {
-    const genAI = getGeminiClient(apiKey);
+export async function generateCodeNarration(code, language, format = false) {
+    const genAI = getGeminiClient();
     const model = genAI.getGenerativeModel({
         model: "gemini-2.5-flash"
     });
@@ -21,8 +21,8 @@ export async function generateCodeNarration(code, language, format = false, apiK
     return fullResponse;
 }
 // Alternative: Return as a stream for real-time processing
-export async function* generateCodeNarrationStream(code, language, apiKey) {
-    const genAI = getGeminiClient(apiKey);
+export async function* generateCodeNarrationStream(code, language) {
+    const genAI = getGeminiClient();
     const model = genAI.getGenerativeModel({
         model: "gemini-1.5-flash-latest",
     });
