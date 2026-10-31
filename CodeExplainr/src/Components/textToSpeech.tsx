@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Play, Pause, Square, Volume2, FastForward, Rewind, MessageCircle, Mic, Search, Loader2, VolumeX } from 'lucide-react';
+import { Play, Pause, Square, Volume2, FastForward, Rewind, Mic, Search, Loader2, VolumeX, ArrowDown, Workflow } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { API_ENDPOINTS } from '../config/api';
 
 interface LineExplanation {
@@ -7,9 +8,20 @@ interface LineExplanation {
   text: string;
 }
 
+type FlowStepType = 'start' | 'process' | 'decision' | 'end';
+const EMPTY_LINE_MAP: LineExplanation[] = [];
+
+interface FlowStep {
+  line: number | number[];
+  type: FlowStepType;
+  title: string;
+  description: string;
+}
+
 interface ExplanationData {
   explanation: {
     line_map: LineExplanation[];
+    flow_map?: FlowStep[];
   };
 }
 
@@ -29,13 +41,19 @@ function TextToSpeech({
   language,
   currentLine,
   setCurrentLine,
-  explanationData
+  explanationData,
+  flowSteps,
+  controlsHost,
+  explanationHost,
 }: {
   code: string;
   language: string;
   currentLine: number | null;
   setCurrentLine: (line: number) => void;
   explanationData: ExplanationData | null;
+  flowSteps: FlowStep[];
+  controlsHost: HTMLDivElement | null;
+  explanationHost: HTMLDivElement | null;
 }) {
 
   const [currentExplanationIndex, setCurrentExplanationIndex] = useState(0);
@@ -54,30 +72,55 @@ function TextToSpeech({
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const currentIndexRef = useRef(0);       // ← mirrors currentExplanationIndex for use inside closures
   const rateRef = useRef(1);               // ← mirrors rate for live rate changes inside closures
+  const speakLineRef = useRef<(index: number) => void>(() => undefined);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   // ── Per-line DOM refs for auto-scroll ────────────────────────────────────
-  const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
   const codeLines = code ? code.split('\n') : [];
+  const flowContainerRef = useRef<HTMLDivElement | null>(null);
+  const flowStepRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const narrationLines = explanationData?.explanation.line_map ?? EMPTY_LINE_MAP;
+  const activeFlowIndex = flowSteps.findIndex((step) =>
+    (Array.isArray(step.line) ? step.line : [step.line]).includes(currentLine ?? -1)
+  );
+  const resolvedActiveFlowIndex = activeFlowIndex >= 0 ? activeFlowIndex : 0;
 
-  // Keep lineRefs array sized correctly when code changes
   useEffect(() => {
-    lineRefs.current = lineRefs.current.slice(0, codeLines.length);
-  }, [codeLines.length]);
+    flowStepRefs.current = flowStepRefs.current.slice(0, flowSteps.length);
+  }, [flowSteps.length]);
 
-  // Auto-scroll to active line whenever currentLine changes
   useEffect(() => {
-    if (currentLine == null || currentLine === 0) return;
-    const el = lineRefs.current[currentLine - 1]; // currentLine is 1-based
-    if (el) {
-      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    const container = flowContainerRef.current;
+    const activeStep = flowStepRefs.current[resolvedActiveFlowIndex];
+    if (!container || !activeStep || flowSteps.length === 0) return;
+
+    const containerBounds = container.getBoundingClientRect();
+    const stepBounds = activeStep.getBoundingClientRect();
+    if (stepBounds.top < containerBounds.top || stepBounds.bottom > containerBounds.bottom) {
+      container.scrollTo({
+        top: container.scrollTop + stepBounds.top - containerBounds.top - (containerBounds.height - stepBounds.height) / 2,
+        behavior: 'smooth',
+      });
     }
-  }, [currentLine]);
+  }, [resolvedActiveFlowIndex, flowSteps.length]);
 
   // Keep rateRef in sync so speakLine closures always read the latest value
   useEffect(() => {
     rateRef.current = rate;
   }, [rate]);
+
+  useEffect(() => {
+    if (currentLine === null || currentLine < 1) return;
+    const narrationIndex = narrationLines.findIndex((item) => item.line === currentLine);
+    if (narrationIndex < 0 || narrationIndex === currentIndexRef.current) return;
+
+    setCurrentExplanationIndex(narrationIndex);
+    currentIndexRef.current = narrationIndex;
+    if (shouldContinueRef.current) {
+      window.speechSynthesis.cancel();
+      setTimeout(() => speakLineRef.current(narrationIndex), 100);
+    }
+  }, [currentLine, narrationLines]);
 
   // Keep the question action beside the line currently being narrated.
   useEffect(() => {
@@ -163,6 +206,7 @@ function TextToSpeech({
     currentUtteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
   };
+  speakLineRef.current = speakLine;
 
   const handlePlayPause = () => {
     if (!explanationData) return;
@@ -225,28 +269,21 @@ function TextToSpeech({
   };
 
   const handleLineClick = (idx: number) => {
-    setCurrentLine(idx + 1);  // store 1-based
-    setQuestionLineIndex(idx);
-    setQuestionFormLineIndex(null);
-    setAnswer('');
-    if (explanationData) {
-      const lineMap = explanationData.explanation.line_map.find(l => l.line === idx + 1);
-      if (lineMap) {
-        const mapIndex = explanationData.explanation.line_map.indexOf(lineMap);
-        const wasPlaying = shouldContinueRef.current;
-        window.speechSynthesis.cancel();
-        setCurrentExplanationIndex(mapIndex);
-        currentIndexRef.current = mapIndex;
-        if (wasPlaying) setTimeout(() => speakLine(mapIndex), 100);
-      }
-    }
-  };
+    const step = flowSteps[idx];
+    if (!step || !explanationData) return;
+    const line = Array.isArray(step.line) ? step.line[0] : step.line;
+    const narrationIndex = narrationLines.findIndex((item) => item.line === line);
+    if (narrationIndex < 0) return;
 
-  const handleAskClick = (idx: number) => {
-    setQuestionLineIndex(idx);
-    setQuestionFormLineIndex(idx);
-    setQuestion('');
-    setAnswer('');
+    const wasPlaying = shouldContinueRef.current;
+    window.speechSynthesis.cancel();
+    setCurrentExplanationIndex(narrationIndex);
+    currentIndexRef.current = narrationIndex;
+    setCurrentLine(line);
+    shouldContinueRef.current = wasPlaying;
+    setIsPaused(false);
+    setIsPlaying(wasPlaying);
+    if (wasPlaying) setTimeout(() => speakLine(narrationIndex), 100);
   };
 
   const toggleAnswerVoice = () => {
@@ -337,19 +374,9 @@ function TextToSpeech({
     };
   }, []);
 
-  return (
-    <div className="space-y-4">
-      {/* Controls Section */}
-      <div className="rounded-xl border border-emerald-800/30 bg-emerald-950 p-4 shadow-lg shadow-emerald-950/10">
-        <div className="flex items-center justify-between mb-4">
-          <label className="flex items-center text-sm font-semibold text-emerald-200">
-            <Volume2 size={16} className="mr-2" />
-            Audio Controls
-          </label>
-
-        </div>
-
-        <div className="flex items-center gap-3 mb-4">
+  const audioControls = (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
           <button
             onClick={handlePrevious}
             disabled={currentExplanationIndex === 0}
@@ -400,9 +427,8 @@ function TextToSpeech({
               className="h-2 flex-1 cursor-pointer appearance-none rounded-lg bg-emerald-800 accent-lime-400"
             />
           </div>
-        </div>
-
-        <div className="flex items-center gap-2 mb-3">
+      </div>
+      <div className="flex items-center gap-2 whitespace-nowrap sm:ml-auto">
           <div className={`w-2 h-2 rounded-full ${isPlaying && !isPaused ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`}></div>
           <span className="text-xs text-emerald-300">
             {isPlaying && !isPaused ? 'Speaking...' : isPaused ? 'Paused' : 'Stopped'}
@@ -412,108 +438,170 @@ function TextToSpeech({
               Line {currentExplanationIndex + 1} of {explanationData.explanation.line_map.length}
             </span>
           )}
-        </div>
+      </div>
+    </div>
+  );
 
-        <div className="rounded-lg border border-emerald-700/40 bg-[#163526] p-3">
-          <div className="mb-1 text-xs text-lime-300">
+  return (
+    <>
+      {controlsHost && createPortal(audioControls, controlsHost)}
+      {explanationHost && createPortal(
+        <section aria-label="Current explanation" className="shadow-lg shadow-emerald-950/10">
+          <div className="mb-1 text-xs font-semibold text-lime-300">
             {explanationData
               ? `Line ${explanationData.explanation.line_map[currentExplanationIndex]?.line || 1} Explanation`
               : 'Full Explanation'}
           </div>
-          <div className="text-sm leading-relaxed text-emerald-100">
-            {getCurrentText() || 'No explanation available'}
+          <div className="max-h-20 overflow-y-auto text-sm leading-relaxed text-emerald-100">
+            {getCurrentText() || 'Generate an explanation to follow the execution flow.'}
           </div>
-        </div>
-      </div>
+        </section>,
+        explanationHost,
+      )}
+      <div className="grid h-[710px] min-h-0 grid-rows-[minmax(0,1fr)_auto] gap-3 overflow-hidden">
 
-      {/* Code Display Section */}
-      <div>
-        <label className="mb-2 flex items-center text-sm font-semibold text-emerald-800">
-          <MessageSquare size={16} className="mr-2" />
-          Navigation of the flow of the Code
-        </label>
-        <div className="h-96 w-full overflow-y-auto rounded-lg border border-emerald-900/30 bg-[#10251b] px-4 py-3 shadow-inner">
-          {code ? (
-            <div className="font-mono text-sm">
-              {codeLines.map((line, idx) => {
-                const isQuestionLine = isPlaying && questionLineIndex === idx;
-                const isQuestionFormOpen = questionFormLineIndex === idx;
-                return (
-                  <React.Fragment key={idx}>
-                    <div
-                      ref={el => { lineRefs.current[idx] = el; }}
-                      className={`flex cursor-pointer items-center gap-2 rounded px-2 py-1 transition-all hover:bg-emerald-800/50 ${currentLine === idx + 1 ? 'border-l-4 border-lime-400 bg-emerald-800/70' : ''}`}
-                      onClick={() => handleLineClick(idx)}
-                    >
-                      <span className="mr-2 select-none text-emerald-500">{idx + 1}</span>
-                      <span className="min-w-0 flex-1 text-emerald-100">{line || ' '}</span>
-                      {isQuestionLine && (
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleAskClick(idx);
-                          }}
-                          className="inline-flex shrink-0 items-center gap-1 rounded bg-lime-400 px-2 py-1 text-xs font-bold text-emerald-950 hover:bg-lime-300"
-                        >
-                          <MessageCircle size={13} /> Ask a question
-                        </button>
+        <section aria-labelledby="visual-flow-heading" className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-emerald-900/15 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <h3 id="visual-flow-heading" className="flex items-center gap-2 text-base font-bold text-emerald-950">
+                <Workflow size={18} className="text-emerald-700" />
+                Execution Flow
+              </h3>
+              <p className="mt-1 text-xs text-slate-500">The active step follows the highlighted code line.</p>
+            </div>
+            {flowSteps.length > 0 && (
+              <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">
+                STEP {resolvedActiveFlowIndex + 1} OF {flowSteps.length}
+              </span>
+            )}
+          </div>
+
+          {flowSteps.length > 0 ? (
+            <div ref={flowContainerRef} className="min-h-0 flex-1 overflow-y-auto rounded-lg bg-slate-50/80 px-3 py-3">
+              <div className="flex flex-col items-center">
+                {flowSteps.map((step, index) => {
+                  const stepLines = Array.isArray(step.line) ? step.line : [step.line];
+                  const isActive = index === resolvedActiveFlowIndex;
+                  const isComplete = index < resolvedActiveFlowIndex;
+                  const isDecision = step.type === 'decision';
+                  const isPill = step.type === 'start' || step.type === 'end';
+                  const stateClass = isActive
+                    ? 'border-emerald-500 bg-lime-100 shadow-lg shadow-emerald-900/10 ring-2 ring-emerald-200'
+                    : isComplete
+                      ? 'border-emerald-200 bg-emerald-50'
+                      : 'border-slate-200 bg-white';
+
+                  return (
+                    <React.Fragment key={`${stepLines.join('-')}-${index}`}>
+                      <button
+                        ref={(element) => { flowStepRefs.current[index] = element; }}
+                        type="button"
+                        aria-current={isActive ? 'step' : undefined}
+                        aria-label={`Lines ${stepLines.join(', ')}, ${step.title}. ${step.description}`}
+                        onClick={() => handleLineClick(index)}
+                        className={`relative flex min-h-14 w-full max-w-sm flex-col items-center justify-center border-2 px-4 py-2 text-center transition-all duration-300 hover:border-emerald-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${isDecision ? 'my-1 min-h-24 max-w-[17rem] px-10' : isPill ? 'rounded-full' : 'rounded-xl'} ${stateClass}`}
+                        style={isDecision ? { clipPath: 'polygon(50% 0, 100% 50%, 50% 100%, 0 50%)' } : undefined}
+                      >
+                        <span className={`text-[9px] font-extrabold uppercase tracking-wider ${isActive ? 'text-emerald-800' : 'text-slate-500'}`}>
+                          {isActive ? 'Active' : isComplete ? 'Complete' : step.type}
+                        </span>
+                        <span className="text-xs font-bold leading-tight text-emerald-950">{step.title}</span>
+                        <span className="mt-0.5 text-[10px] leading-snug text-slate-600">{step.description}</span>
+                        <span className="absolute right-2 top-1 text-[9px] font-semibold text-slate-400">
+                          L{stepLines.join(', ')}
+                        </span>
+                      </button>
+                      {index < flowSteps.length - 1 && (
+                        <ArrowDown
+                          aria-hidden="true"
+                          size={16}
+                          className={`my-0.5 shrink-0 ${index < resolvedActiveFlowIndex ? 'text-emerald-500' : 'text-slate-300'}`}
+                        />
                       )}
-                    </div>
-                    {isQuestionFormOpen && (
-                      <form onSubmit={handleQuestionSubmit} className="mb-2 ml-8 rounded-lg border border-emerald-700/50 bg-emerald-900/70 p-3">
-                        <p className="mb-2 text-xs text-lime-300">Question about line {idx + 1}</p>
-                        <div className="flex gap-2">
-                          <input
-                            value={question}
-                            onChange={(event) => setQuestion(event.target.value)}
-                            placeholder="Ask about this line..."
-                            className="min-w-0 flex-1 rounded border border-emerald-600/60 bg-emerald-950 px-3 py-2 text-sm text-white outline-none focus:border-lime-400"
-                            aria-label={`Question about line ${idx + 1}`}
-                          />
-                          <button
-                            type="button"
-                            onClick={toggleVoiceInput}
-                            className={`rounded p-2 text-lime-300 hover:bg-emerald-700 ${isListening ? 'bg-rose-700 text-white' : 'bg-emerald-800'}`}
-                            title={isListening ? 'Stop voice input' : 'Use voice input'}
-                          >
-                            <Mic size={18} />
-                          </button>
-                          <button
-                            type="submit"
-                            disabled={!question.trim() || isAnswering}
-                            className="inline-flex items-center gap-1 rounded bg-lime-400 px-3 py-2 text-sm font-bold text-emerald-950 hover:bg-lime-300 disabled:cursor-not-allowed disabled:bg-slate-500 disabled:text-slate-300"
-                          >
-                            {isAnswering ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                            Get answer
-                          </button>
-                        </div>
-                        <div className="mt-3 flex items-start justify-between gap-3">
-                          {answer ? <p className="text-sm leading-relaxed text-emerald-100">{answer}</p> : <span />}
-                          <button
-                            type="button"
-                            onClick={toggleAnswerVoice}
-                            className="inline-flex shrink-0 items-center gap-1 rounded bg-emerald-800 px-2 py-1 text-xs text-emerald-100 hover:bg-emerald-700"
-                            title={answerVoiceEnabled ? 'Turn answer voice off' : 'Turn answer voice on'}
-                          >
-                            {answerVoiceEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-                            {answerVoiceEnabled ? 'Voice on' : 'Voice off'}
-                          </button>
-                        </div>
-                      </form>
-                    )}
-                  </React.Fragment>
-                );
-              })}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
             </div>
           ) : (
-            <div className="text-gray-500 text-center mt-20">
-              Paste code to see explanation
+            <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-emerald-900/20 bg-emerald-50/50 px-4 py-8 text-center">
+              <p className="text-sm font-semibold text-emerald-900">Your flow appears here</p>
+              <p className="mt-1 text-xs text-slate-500">Generate an explanation to map key execution stages.</p>
             </div>
           )}
-        </div>
+        </section>
+
+        <section aria-label="Ask about code" className="rounded-xl border border-emerald-800/30 bg-emerald-950 p-3">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold text-lime-300">
+              {questionFormLineIndex !== null
+                ? `Question about line ${questionFormLineIndex + 1}`
+                : currentLine && currentLine > 0
+                  ? `Ask about highlighted line ${currentLine}`
+                  : 'Ask a question about a line'}
+            </p>
+            {questionFormLineIndex === null && currentLine !== null && currentLine > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuestionLineIndex(currentLine - 1);
+                  setQuestionFormLineIndex(currentLine - 1);
+                  setQuestion('');
+                  setAnswer('');
+                }}
+                className="text-xs font-semibold text-lime-300 underline decoration-lime-300/40 underline-offset-4 hover:text-white"
+              >
+                Ask
+              </button>
+            )}
+          </div>
+
+          {questionFormLineIndex !== null && questionLineIndex !== null && (
+            <form onSubmit={handleQuestionSubmit} className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <input
+                  value={question}
+                  onChange={(event) => setQuestion(event.target.value)}
+                  placeholder="Ask about this line..."
+                  className="min-w-0 flex-1 rounded border border-emerald-600/60 bg-emerald-950 px-3 py-2 text-sm text-white outline-none focus:border-lime-400"
+                  aria-label={`Question about line ${questionLineIndex + 1}`}
+                />
+                <button
+                  type="button"
+                  onClick={toggleVoiceInput}
+                  className={`rounded p-2 text-lime-300 hover:bg-emerald-700 ${isListening ? 'bg-rose-700 text-white' : 'bg-emerald-800'}`}
+                  title={isListening ? 'Stop voice input' : 'Use voice input'}
+                >
+                  <Mic size={18} />
+                </button>
+                <button
+                  type="submit"
+                  disabled={!question.trim() || isAnswering}
+                  className="inline-flex items-center gap-1 rounded bg-lime-400 px-3 py-2 text-sm font-bold text-emerald-950 hover:bg-lime-300 disabled:cursor-not-allowed disabled:bg-slate-500 disabled:text-slate-300"
+                >
+                  {isAnswering ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                  Get answer
+                </button>
+              </div>
+              {answer && (
+                <div className="flex items-start justify-between gap-3">
+                  <p className="max-h-16 overflow-y-auto text-xs leading-relaxed text-emerald-100">{answer}</p>
+                  <button
+                    type="button"
+                    onClick={toggleAnswerVoice}
+                    className="inline-flex shrink-0 items-center gap-1 rounded bg-emerald-800 px-2 py-1 text-xs text-emerald-100 hover:bg-emerald-700"
+                    title={answerVoiceEnabled ? 'Turn answer voice off' : 'Turn answer voice on'}
+                  >
+                    {answerVoiceEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                    {answerVoiceEnabled ? 'Voice on' : 'Voice off'}
+                  </button>
+                </div>
+              )}
+            </form>
+          )}
+        </section>
       </div>
-    </div>
+    </>
   );
 }
 

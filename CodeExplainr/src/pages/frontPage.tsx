@@ -11,9 +11,19 @@ interface LineExplanation {
   text: string;
 }
 
+type FlowStepType = "start" | "process" | "decision" | "end";
+
+interface FlowStep {
+  line: number | number[];
+  type: FlowStepType;
+  title: string;
+  description: string;
+}
+
 interface ExplanationData {
   explanation: {
     line_map: LineExplanation[];
+    flow_map?: FlowStep[];
   };
 }
 
@@ -44,6 +54,8 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
   const [code, setCode] = useState<string>(DEFAULT_CODE);
   const [isExplaining, setIsExplaining] = useState<boolean>(false);
   const [currentLine, setCurrentLine] = useState<number | null>(null);
+  const [playbackControlsHost, setPlaybackControlsHost] = useState<HTMLDivElement | null>(null);
+  const [explanationPreviewHost, setExplanationPreviewHost] = useState<HTMLDivElement | null>(null);
 
   const [explanationData, setExplanationData] = useState<ExplanationData | null>(null);
 
@@ -105,7 +117,7 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
         <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-teal-200/20 blur-3xl sm:h-96 sm:w-96" />
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-10 lg:py-8 relative z-10">
+      <div className="relative z-10 w-full px-4 py-4 sm:px-6 sm:py-10 lg:px-8 lg:py-8">
         {/* Hero Section */}
         <header className="text-center mb-10 sm:mb-14 lg:mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-50 border border-teal-200 mb-6">
@@ -130,12 +142,12 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
         </header>
 
         {/* Main Interface */}
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full mx-auto">
           <div className="overflow-hidden rounded-2xl border border-emerald-900/10 bg-white shadow-xl shadow-emerald-950/10">
             {/* Controls Header */}
             <div className="border-b border-emerald-900/10 bg-emerald-50/70 px-4 py-5 sm:px-6">
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                <div className="flex-1 min-w-[200px] w-full sm:w-auto sm:max-w-xs">
+                <div className="flex-1  w-full sm:w-auto sm:max-w-xs">
                   <label className="mt-4 mb-2 block text-xs font-bold uppercase tracking-wider text-emerald-800">
                     Language
                   </label>
@@ -182,15 +194,39 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
                 </div>
               </div>
 
+              <div className="mt-4 flex flex-col gap-3 border-t border-emerald-900/10 pt-4 lg:flex-row lg:items-center">
+                <div
+                  ref={setPlaybackControlsHost}
+                  className="min-w-0 flex-1 rounded-xl border border-emerald-800/30 bg-emerald-950 px-4 py-3"
+                />
+                <button
+                  onClick={() => CodeExplanation(code)}
+                  disabled={isCodeEmpty || isExplaining}
+                  className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-emerald-800 px-5 py-3 font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none lg:w-auto"
+                >
+                  {isExplaining ? <Loader2 size={20} className="animate-spin" /> : <Mic size={20} />}
+                  <span>{isExplaining ? "Preparing explanation..." : "Start Voice Explanation"}</span>
+                </button>
+              </div>
+              <div
+                ref={setExplanationPreviewHost}
+                className="mt-3 min-h-16 rounded-xl border border-emerald-800/30 bg-emerald-950 p-3"
+              />
 
             </div>
 
             {/* Code Editor Section */}
             <div className="p-4 sm:p-6">
-              <div ref={workspaceRef} className="grid scroll-mt-28 items-stretch gap-6 lg:grid-cols-2">
+              <div ref={workspaceRef} className="grid scroll-mt-28 items-stretch gap-6 lg:grid-cols-[1.2fr_0.8fr]">
                 {/* Input Code */}
                 <div className="flex flex-col">
-                  <CodeInput code={code} setCode={setCode} language={language} />
+                  <CodeInput
+                    code={code}
+                    setCode={setCode}
+                    language={language}
+                    currentLine={currentLine}
+                    onLineSelect={setCurrentLine}
+                  />
                 </div>
 
                 {/* Explanation Output */}
@@ -206,30 +242,14 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
                       currentLine={currentLine}
                       setCurrentLine={setCurrentLine}
                       explanationData={explanationData}
+                      flowSteps={explanationData?.explanation.flow_map ?? []}
+                      controlsHost={playbackControlsHost}
+                      explanationHost={explanationPreviewHost}
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Action Controls */}
-              <div className="flex flex-wrap gap-3 justify-center">
-                <div>
-                  <button
-                    onClick={() => CodeExplanation(code)}
-                    disabled={isCodeEmpty || isExplaining}
-                    className="relative flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-lg bg-emerald-800 px-6 py-3 font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-700 hover:shadow-emerald-700/30 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none sm:w-auto"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                    {isExplaining ? (
-                      <Loader2 size={20} className="animate-spin" />
-                    ) : (
-                      <Mic size={20} />
-                    )}
-                    <span>{isExplaining ? "Explaining..." : "Start Voice Explanation"}</span>
-                  </button>
-                </div>
-
-              </div>
             </div>
           </div>
 
