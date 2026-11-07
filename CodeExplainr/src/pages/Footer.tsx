@@ -1,4 +1,4 @@
-import { Code2, Github, Linkedin, Mail } from "lucide-react";
+import { Linkedin, Mail } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -7,8 +7,12 @@ const Footer = () => {
         <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-lg">
             <div className="mb-3 flex items-center gap-3">
-              <span className="rounded-md bg-emerald-800 p-2 text-white">
-                <Code2 size={19} />
+              <span className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-emerald-950/15 bg-[#0b1623] p-1 shadow-md shadow-emerald-950/15">
+                <img
+                  src="/flow_logo.png"
+                  alt="CodeJourney logo"
+                  className="h-full w-full rounded-lg object-cover"
+                />
               </span>
               <h2 className="text-lg font-bold">CodeJourney AI</h2>
             </div>
