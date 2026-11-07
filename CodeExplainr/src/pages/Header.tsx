@@ -25,7 +25,7 @@ const Header = ({ onHowItWorks, onFeatures, onGetStarted }: HeaderProps) => {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
-                CodeExplainer
+                CodeFlowLink AI
               </h1>
               <p className="flex items-center gap-1 text-xs text-emerald-300 sm:text-sm">
                 <Sparkles size={12} className="text-lime-300" />

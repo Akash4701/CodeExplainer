@@ -58,7 +58,7 @@ function CodeInput({ code, setCode, language, currentLine, onLineSelect }: CodeI
   return (
     <div className="flex flex-col h-full">
       <div className='flex flex-row gap-between'>
-        <label className="mb-3 flex items-center gap-2 text-sm font-semibold text-emerald-900">
+        <label className="mb-3 flex items-center gap-2 text-xs font-semibold text-emerald-900">
           <Code2 size={16} className="text-emerald-600" />
           Your Code
         </label>
@@ -66,7 +66,7 @@ function CodeInput({ code, setCode, language, currentLine, onLineSelect }: CodeI
           <button
             onClick={formatCode}
             disabled={loading || !code.trim()}
-            className="text-sm font-semibold text-emerald-600 transition-colors hover:text-emerald-800 disabled:cursor-not-allowed disabled:text-slate-400"
+            className="text-xs font-semibold text-emerald-600 transition-colors hover:text-emerald-800 disabled:cursor-not-allowed disabled:text-slate-400"
           >
             Format Code
           </button>
@@ -77,7 +77,7 @@ function CodeInput({ code, setCode, language, currentLine, onLineSelect }: CodeI
       <div className="relative h-[710px] min-h-0 overflow-hidden rounded-xl border border-emerald-900/40 bg-[#10251b] shadow-inner shadow-emerald-950/30 transition-all focus-within:border-lime-400 focus-within:ring-2 focus-within:ring-lime-400/30">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
           <div
-            className="min-h-full min-w-full px-4 py-4 font-mono text-sm leading-[1.625rem]"
+            className="min-h-full min-w-full px-4 py-4 font-mono text-xs leading-[1.625rem]"
             style={{ transform: `translate(${-editorScroll.left}px, ${-editorScroll.top}px)`, tabSize: 2 }}
           >
             {code.split('\n').map((line, index) => (
@@ -105,13 +105,13 @@ function CodeInput({ code, setCode, language, currentLine, onLineSelect }: CodeI
             left: event.currentTarget.scrollLeft,
           })}
           placeholder={`// Paste your ${language} code here...\nfunction example() {\n  return "Hello World";\n}`}
-          className="relative z-10 h-full w-full resize-none whitespace-pre overflow-auto rounded-xl bg-transparent px-4 py-4 font-mono text-sm leading-[1.625rem] text-transparent caret-lime-300 selection:bg-emerald-500/50 selection:text-emerald-50 focus:outline-none"
+          className="relative z-10 h-full w-full resize-none whitespace-pre overflow-auto rounded-xl bg-transparent px-4 py-4 font-mono text-xs leading-[1.625rem] text-transparent caret-lime-300 selection:bg-emerald-500/50 selection:text-emerald-50 focus:outline-none"
           spellCheck="false"
           wrap="off"
           style={{ tabSize: 2 }}
         />
         {!code && (
-          <div className="pointer-events-none absolute inset-0 px-4 py-4 font-mono text-sm leading-[1.625rem] text-emerald-700">
+          <div className="pointer-events-none absolute inset-0 px-4 py-4 font-mono text-xs leading-[1.625rem] text-emerald-700">
             {`// Paste your ${language} code here...\nfunction example() {\n  return "Hello World";\n}`}
           </div>
         )}

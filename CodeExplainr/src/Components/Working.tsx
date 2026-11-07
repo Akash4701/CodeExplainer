@@ -35,7 +35,7 @@ function Working({ onGetStarted }: WorkingProps) {
                     <div>
                         <p className="mb-3 text-xs font-bold uppercase tracking-wider text-lime-300">A clear path from code to clarity</p>
                         <h2 id="working-heading" className="max-w-xl text-3xl font-extrabold leading-tight sm:text-4xl">
-                            How CodeExplainer works
+                            How CodeFlowLink  works
                         </h2>
                         <p className="mt-3 max-w-xl text-sm leading-relaxed text-emerald-100/75 sm:text-base">
                             Add a piece of code, then listen, follow along, and dig into the lines that matter to you.

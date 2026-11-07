@@ -1,4 +1,4 @@
-import { Upload, Sparkles, Terminal, Mic, Loader2, Code2 } from "lucide-react";
+import { Upload, Sparkles, Terminal, Mic, Loader2, Workflow } from "lucide-react";
 import { useState, useCallback, useMemo } from "react";
 import TextToSpeech from "../Components/textToSpeech";
 import CodeInput from "../Components/CodeInput";
@@ -123,21 +123,20 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-50 border border-teal-200 mb-6">
             <Sparkles size={16} className="text-teal-600" />
             <span className="text-xs font-semibold tracking-wide text-emerald-700 sm:text-sm">
-              Voice-first code understanding
+              A clearer way to follow code
             </span>
           </div>
 
           <h1 className="mb-4 text-3xl font-extrabold leading-tight tracking-tight text-emerald-950 sm:text-5xl lg:text-6xl">
-            Hear how your code works
+            See how your code flows.
             <br />
             <span className="bg-gradient-to-r from-emerald-700 via-teal-600 to-lime-600 bg-clip-text text-transparent">
-              from the first line to the last.
+              Every step linked to the source.
             </span>
           </h1>
 
           <p className="mx-auto max-w-2xl text-sm font-medium leading-relaxed text-slate-600 sm:text-base lg:text-lg">
-            Turn unfamiliar code into a clear spoken walkthrough. Paste a snippet, choose its language,
-            and follow the code's flow with natural voice narration.
+            Get a plain-language map of your code's key actions, decisions, and data. Each step connects to the source lines behind it, so you can jump from the big picture straight to the code.
           </p>
         </header>
 
@@ -204,8 +203,8 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
                   disabled={isCodeEmpty || isExplaining}
                   className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-emerald-800 px-5 py-3 font-semibold text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none lg:w-auto"
                 >
-                  {isExplaining ? <Loader2 size={20} className="animate-spin" /> : <Mic size={20} />}
-                  <span>{isExplaining ? "Preparing explanation..." : "Start Voice Explanation"}</span>
+                  {isExplaining ? <Loader2 size={20} className="animate-spin" /> : <Workflow size={20} />}
+                  <span>{isExplaining ? "Preparing explanation..." : "Map my code's flow"}</span>
                 </button>
               </div>
               <div
@@ -233,7 +232,7 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
                 <div className="flex flex-col">
                   <label className="mb-3 flex items-center gap-2 text-sm font-bold text-emerald-950">
                     <Sparkles size={16} className="text-lime-600" />
-                    AI Explanation
+                    Code-linked explanation
                   </label>
                   <div className="flex-1">
                     <TextToSpeech
@@ -255,33 +254,33 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
 
           <section ref={featuresRef} aria-labelledby="features-heading" className="scroll-mt-28 border-t border-emerald-900/10 py-12 sm:py-16">
             <div className="mb-7 max-w-2xl">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-emerald-700">Made for understanding</p>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-emerald-700">For learners and curious coders</p>
               <h2 id="features-heading" className="text-2xl font-extrabold text-emerald-950 sm:text-3xl">
-                More than a code formatter
+                Not just a flowchart. Your code, connected.
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-600 sm:text-base">
-                Move from reading unfamiliar code to following its logic, asking questions, and listening at your own pace.
+                Follow the execution path and jump from any flow step to the source lines that make it happen. No disconnected diagram, just a clearer view of your own code.
               </p>
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
               <FeatureCard
-                icon={<Mic className="text-emerald-600" size={22} />}
-                title="Narration that follows the code"
-                description="Hear how each part connects as you follow the code's flow, with the active line highlighted to keep you oriented."
+                icon={<Workflow className="text-emerald-600" size={22} />}
+                title="A flow shaped by your code"
+                description="See key actions, decisions, and results in execution order, mapped to the source lines where they happen."
                 gradient="bg-gradient-to-br from-emerald-50 to-lime-50"
                 accent="border-emerald-200"
               />
               <FeatureCard
                 icon={<Sparkles className="text-teal-600" size={22} />}
-                title="Ask about a specific line"
-                description="Pause on a confusing part and ask a contextual question about that line and its explanation."
+                title="Flow step to source line"
+                description="Select a step to jump straight to its code. The matching line highlights while you hear why it matters."
                 gradient="bg-gradient-to-br from-teal-50 to-cyan-50"
                 accent="border-teal-200"
               />
               <FeatureCard
-                icon={<Code2 className="text-lime-700" size={22} />}
-                title="Your code, your language"
-                description="Choose from supported languages, then paste or upload the code you want to explore."
+                icon={<Mic className="text-lime-700" size={22} />}
+                title="Understand the logic, not every line"
+                description="Hear concise explanations of key transitions and data changes, without trudging through every line or repeated loop."
                 gradient="bg-gradient-to-br from-lime-50 to-emerald-50"
                 accent="border-lime-200"
               />
