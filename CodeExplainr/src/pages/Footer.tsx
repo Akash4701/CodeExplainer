@@ -10,7 +10,7 @@ const Footer = () => {
               <span className="rounded-md bg-emerald-800 p-2 text-white">
                 <Code2 size={19} />
               </span>
-              <h2 className="text-lg font-bold">CodeFlowLink AI</h2>
+              <h2 className="text-lg font-bold">CodeJourney AI</h2>
             </div>
             <p className="text-sm leading-relaxed text-emerald-950/70">
               A calmer way to understand unfamiliar code: listen, follow the flow, and learn as you go.
@@ -35,10 +35,10 @@ const Footer = () => {
             </a>
           </nav>
         </div>
-
+         
         <div className="mt-8 border-t border-emerald-900/15 pt-5">
           <p className="text-xs text-emerald-950/60">
-            © 2026 CodeFlowLink AI. Built for clearer code.
+            © 2026 CodeJourney AI. Built for clearer code.
           </p>
         </div>
       </div>

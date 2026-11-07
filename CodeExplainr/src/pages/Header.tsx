@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Code2, Sparkles, Terminal, ChevronRight } from 'lucide-react';
+import { Sparkles, Terminal, ChevronRight } from 'lucide-react';
 
 interface HeaderProps {
   onHowItWorks: () => void;
@@ -20,12 +20,16 @@ const Header = ({ onHowItWorks, onFeatures, onGetStarted }: HeaderProps) => {
       <div className="container mx-auto px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 group cursor-pointer">
-            <div className="rounded-xl bg-emerald-500 p-2.5 shadow-lg shadow-emerald-500/20 transition-all duration-300 group-hover:scale-110 group-hover:bg-lime-400">
-              <Code2 className="text-white" size={26} />
+            <div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-[#0b1623] p-1 shadow-lg shadow-cyan-950/40 transition-all duration-300 group-hover:scale-105">
+              <img
+                src="/flow_logo.png"
+                alt="CodeJourney logo"
+                className="h-full w-full rounded-xl object-cover"
+              />
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
-                CodeFlowLink AI
+                CodeJourney AI
               </h1>
               <p className="flex items-center gap-1 text-xs text-emerald-300 sm:text-sm">
                 <Sparkles size={12} className="text-lime-300" />
