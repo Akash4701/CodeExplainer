@@ -196,7 +196,7 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
 
             {/* Code Editor Section */}
             <div className="p-4 sm:p-6">
-              <div ref={workspaceRef} className="grid scroll-mt-28 items-stretch gap-2 lg:grid-cols-[1.2fr_1.4fr]">
+              <div ref={workspaceRef} className="grid scroll-mt-28 items-stretch gap-2 lg:grid-cols-[1.4fr_0.8fr]">
                 {/* Input Code */}
                 <div className="flex flex-col">
                   <CodeInput
