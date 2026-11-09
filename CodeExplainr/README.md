@@ -10,6 +10,15 @@ Use `.env.example` as a starting point, and restart the Vite dev server after ch
 the environment file. Vite exposes `VITE_` variables in the browser, so do not put
 API keys or other secrets in this file.
 
+## Execution-flow mappings
+
+The explanation API returns `explanation.flow_map`. Each node has a stable `id`,
+inclusive one-based `code_ranges`, and a `next` array of successor node IDs. The
+flow map is the sole source of code-to-flow mappings: Monaco highlights every
+range for the active node, and cursor lines select the most specific matching
+range when nodes overlap. Apex classes and Apex Triggers share the same Monaco
+language registration.
+
 Configure `GEMINI_API_KEY` in `backend/.env` for the backend. Gemini requests use this
 server-side key; it is not entered in or sent from the frontend.
 

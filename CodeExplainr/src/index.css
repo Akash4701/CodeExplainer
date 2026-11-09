@@ -11,3 +11,12 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+.monaco-editor .flow-code-range {
+  background-color: rgb(132 204 22 / 18%);
+}
+
+.monaco-editor .flow-code-range-gutter {
+  border-left: 3px solid #a3e635;
+  margin-left: 3px;
+}

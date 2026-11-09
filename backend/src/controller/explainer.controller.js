@@ -8,7 +8,7 @@ export const explainCode = asyncHandler(async (req, res) => {
     const explanation = await generateCodeNarration(codeSnippet, language);
     let cleaned;
     try {
-        cleaned = processGeminiOutput(explanation);
+        cleaned = processGeminiOutput(explanation, codeSnippet);
     }
     catch (error) {
         console.error("Error processing Gemini output:", error);
@@ -17,6 +17,10 @@ export const explainCode = asyncHandler(async (req, res) => {
             details: error.message,
             raw: explanation
         });
+        return;
+    }
+    if ("error" in cleaned) {
+        res.status(422).json({ error: cleaned.error });
         return;
     }
     console.log("Generated explanation:", cleaned);

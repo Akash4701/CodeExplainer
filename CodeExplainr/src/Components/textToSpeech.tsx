@@ -1,29 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Square, Volume2, FastForward, Rewind, Mic, Search, Loader2, VolumeX, ArrowDown, Workflow } from 'lucide-react';
+import { Play, Pause, Square, Volume2, FastForward, Rewind, Mic, Search, Loader2, VolumeX, ChevronDown, RotateCcw, Workflow } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { API_ENDPOINTS } from '../config/api';
+import { getFlowStepForLine, type ExplanationData, type FlowStep } from '../types/executionFlow';
 
-interface LineExplanation {
-  line: number;
-  text: string;
-}
-
-type FlowStepType = 'start' | 'process' | 'decision' | 'end';
-const EMPTY_LINE_MAP: LineExplanation[] = [];
-
-interface FlowStep {
-  line: number | number[];
-  type: FlowStepType;
-  title: string;
-  description: string;
-}
-
-interface ExplanationData {
-  explanation: {
-    line_map: LineExplanation[];
-    flow_map?: FlowStep[];
-  };
-}
+const EMPTY_FLOW_MAP: FlowStep[] = [];
 
 type SpeechRecognitionLike = {
   continuous: boolean;
@@ -41,6 +22,8 @@ function TextToSpeech({
   language,
   currentLine,
   setCurrentLine,
+  activeFlowNodeId,
+  setActiveFlowNodeId,
   explanationData,
   flowSteps,
   controlsHost,
@@ -50,6 +33,8 @@ function TextToSpeech({
   language: string;
   currentLine: number | null;
   setCurrentLine: (line: number) => void;
+  activeFlowNodeId: string | null;
+  setActiveFlowNodeId: (id: string | null) => void;
   explanationData: ExplanationData | null;
   flowSteps: FlowStep[];
   controlsHost: HTMLDivElement | null;
@@ -79,11 +64,18 @@ function TextToSpeech({
   const codeLines = code ? code.split('\n') : [];
   const flowContainerRef = useRef<HTMLDivElement | null>(null);
   const flowStepRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const narrationLines = explanationData?.explanation.line_map ?? EMPTY_LINE_MAP;
-  const activeFlowIndex = flowSteps.findIndex((step) =>
-    (Array.isArray(step.line) ? step.line : [step.line]).includes(currentLine ?? -1)
-  );
-  const resolvedActiveFlowIndex = activeFlowIndex >= 0 ? activeFlowIndex : 0;
+  const narrationSteps = explanationData?.explanation.flow_map ?? EMPTY_FLOW_MAP;
+  const activeFlowIndex = flowSteps.findIndex((step) => step.id === activeFlowNodeId);
+
+  useEffect(() => {
+    if (explanationData) return
+    shouldContinueRef.current = false
+    window.speechSynthesis.cancel()
+    setIsPlaying(false)
+    setIsPaused(false)
+    setCurrentExplanationIndex(0)
+    currentIndexRef.current = 0
+  }, [explanationData])
 
   useEffect(() => {
     flowStepRefs.current = flowStepRefs.current.slice(0, flowSteps.length);
@@ -91,8 +83,8 @@ function TextToSpeech({
 
   useEffect(() => {
     const container = flowContainerRef.current;
-    const activeStep = flowStepRefs.current[resolvedActiveFlowIndex];
-    if (!container || !activeStep || flowSteps.length === 0) return;
+    const activeStep = flowStepRefs.current[activeFlowIndex];
+    if (!container || !activeStep || activeFlowIndex < 0) return;
 
     const containerBounds = container.getBoundingClientRect();
     const stepBounds = activeStep.getBoundingClientRect();
@@ -102,7 +94,7 @@ function TextToSpeech({
         behavior: 'smooth',
       });
     }
-  }, [resolvedActiveFlowIndex, flowSteps.length]);
+  }, [activeFlowIndex, flowSteps.length]);
 
   // Keep rateRef in sync so speakLine closures always read the latest value
   useEffect(() => {
@@ -110,8 +102,8 @@ function TextToSpeech({
   }, [rate]);
 
   useEffect(() => {
-    if (currentLine === null || currentLine < 1) return;
-    const narrationIndex = narrationLines.findIndex((item) => item.line === currentLine);
+    if (!activeFlowNodeId) return;
+    const narrationIndex = narrationSteps.findIndex((step) => step.id === activeFlowNodeId);
     if (narrationIndex < 0 || narrationIndex === currentIndexRef.current) return;
 
     setCurrentExplanationIndex(narrationIndex);
@@ -120,7 +112,7 @@ function TextToSpeech({
       window.speechSynthesis.cancel();
       setTimeout(() => speakLineRef.current(narrationIndex), 100);
     }
-  }, [currentLine, narrationLines]);
+  }, [activeFlowNodeId, narrationSteps]);
 
   // Keep the question action beside the line currently being narrated.
   useEffect(() => {
@@ -149,10 +141,10 @@ function TextToSpeech({
 
   const getCurrentText = () => {
     if (!explanationData) return '';
-    if (explanationData.explanation.line_map.length > 0) {
-      return explanationData.explanation.line_map[currentExplanationIndex]?.text || '';
+    if (narrationSteps.length > 0) {
+      return narrationSteps[currentExplanationIndex]?.description || '';
     }
-
+    return '';
   };
 
   const speakLine = (index: number) => {
@@ -160,10 +152,9 @@ function TextToSpeech({
 
     window.speechSynthesis.cancel();
 
-    const text = explanationData.explanation.line_map[index]?.text
-
-
-    if (!text) return;
+    const step = narrationSteps[index];
+    const text = step?.description;
+    if (!step || !text) return;
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = rateRef.current;   // ← always use ref, not stale closure value
@@ -172,16 +163,14 @@ function TextToSpeech({
     utterance.lang = 'en-US';
 
     utterance.onstart = () => {
-      if (explanationData.explanation.line_map[index]) {
-        const lineData = explanationData.explanation.line_map[index];
-        setCurrentLine(lineData.line);   // 1-based, matches idx+1 in renderer
-      }
+      setActiveFlowNodeId(step.id);
+      setCurrentLine(step.code_ranges[0]?.line_start ?? 0);
     };
 
     utterance.onend = () => {
       if (shouldContinueRef.current && explanationData) {
         const nextIndex = index + 1;
-        if (nextIndex < explanationData.explanation.line_map.length) {
+        if (nextIndex < narrationSteps.length) {
           setCurrentExplanationIndex(nextIndex);
           currentIndexRef.current = nextIndex;
           setTimeout(() => speakLine(nextIndex), 50);
@@ -191,6 +180,7 @@ function TextToSpeech({
           setCurrentExplanationIndex(0);
           currentIndexRef.current = 0;
           setCurrentLine(0);
+          setActiveFlowNodeId(null);
         }
       }
     };
@@ -234,12 +224,13 @@ function TextToSpeech({
     setCurrentExplanationIndex(0);
     currentIndexRef.current = 0;
     setCurrentLine(0);
+    setActiveFlowNodeId(null);
   };
 
   const handleNext = () => {
     if (!explanationData) return;
     const nextIndex = currentExplanationIndex + 1;
-    if (nextIndex < explanationData.explanation.line_map.length) {
+    if (nextIndex < narrationSteps.length) {
       const wasPlaying = shouldContinueRef.current;
       window.speechSynthesis.cancel();
       setCurrentExplanationIndex(nextIndex);
@@ -247,7 +238,9 @@ function TextToSpeech({
       if (wasPlaying) {
         setTimeout(() => speakLine(nextIndex), 100);
       } else {
-        setCurrentLine(explanationData.explanation.line_map[nextIndex].line);
+        const nextStep = narrationSteps[nextIndex];
+        setActiveFlowNodeId(nextStep.id);
+        setCurrentLine(nextStep.code_ranges[0]?.line_start ?? 0);
       }
     }
   };
@@ -263,7 +256,9 @@ function TextToSpeech({
       if (wasPlaying) {
         setTimeout(() => speakLine(prevIndex), 100);
       } else {
-        setCurrentLine(explanationData.explanation.line_map[prevIndex].line);
+        const previousStep = narrationSteps[prevIndex];
+        setActiveFlowNodeId(previousStep.id);
+        setCurrentLine(previousStep.code_ranges[0]?.line_start ?? 0);
       }
     }
   };
@@ -271,15 +266,15 @@ function TextToSpeech({
   const handleLineClick = (idx: number) => {
     const step = flowSteps[idx];
     if (!step || !explanationData) return;
-    const line = Array.isArray(step.line) ? step.line[0] : step.line;
-    const narrationIndex = narrationLines.findIndex((item) => item.line === line);
+    const narrationIndex = narrationSteps.findIndex((item) => item.id === step.id);
     if (narrationIndex < 0) return;
 
     const wasPlaying = shouldContinueRef.current;
     window.speechSynthesis.cancel();
     setCurrentExplanationIndex(narrationIndex);
     currentIndexRef.current = narrationIndex;
-    setCurrentLine(line);
+    setActiveFlowNodeId(step.id);
+    setCurrentLine(step.code_ranges[0]?.line_start ?? 0);
     shouldContinueRef.current = wasPlaying;
     setIsPaused(false);
     setIsPlaying(wasPlaying);
@@ -332,9 +327,7 @@ function TextToSpeech({
 
     const selectedLineNumber = questionLineIndex + 1;
     const selectedLine = codeLines[questionLineIndex] ?? '';
-    const selectedExplanation = explanationData?.explanation.line_map.find(
-      (item) => item.line === selectedLineNumber,
-    )?.text ?? '';
+    const selectedExplanation = getFlowStepForLine(flowSteps, selectedLineNumber)?.description ?? '';
 
     setIsAnswering(true);
     setAnswer('');
@@ -406,7 +399,7 @@ function TextToSpeech({
 
           <button
             onClick={handleNext}
-            disabled={!explanationData || currentExplanationIndex >= explanationData.explanation.line_map.length - 1}
+            disabled={!explanationData || currentExplanationIndex >= narrationSteps.length - 1}
             className="rounded bg-emerald-800 p-2 text-emerald-200 transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-800"
             title="Next Line"
           >
@@ -435,7 +428,7 @@ function TextToSpeech({
           </span>
           {explanationData && (
             <span className="ml-2 text-xs text-emerald-400">
-              Line {currentExplanationIndex + 1} of {explanationData.explanation.line_map.length}
+              Step {currentExplanationIndex + 1} of {narrationSteps.length}
             </span>
           )}
       </div>
@@ -449,7 +442,7 @@ function TextToSpeech({
         <section aria-label="Current explanation" className="shadow-lg shadow-emerald-950/10">
           <div className="mb-1 text-xs font-semibold text-lime-300">
             {explanationData
-              ? `Line ${explanationData.explanation.line_map[currentExplanationIndex]?.line || 1} Explanation`
+              ? `${narrationSteps[currentExplanationIndex]?.title ?? 'Execution'} Explanation`
               : 'Full Explanation'}
           </div>
           <div className="max-h-20 overflow-y-auto text-sm leading-relaxed text-emerald-100">
@@ -471,7 +464,7 @@ function TextToSpeech({
             </div>
             {flowSteps.length > 0 && (
               <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">
-                STEP {resolvedActiveFlowIndex + 1} OF {flowSteps.length}
+                {activeFlowIndex >= 0 ? `STEP ${activeFlowIndex + 1} OF ` : 'FLOW '} {flowSteps.length}
               </span>
             )}
           </div>
@@ -480,43 +473,66 @@ function TextToSpeech({
             <div ref={flowContainerRef} className="min-h-0 flex-1 overflow-y-auto rounded-lg bg-slate-50/80 px-3 py-3">
               <div className="flex flex-col items-center">
                 {flowSteps.map((step, index) => {
-                  const stepLines = Array.isArray(step.line) ? step.line : [step.line];
-                  const isActive = index === resolvedActiveFlowIndex;
-                  const isComplete = index < resolvedActiveFlowIndex;
+                  const rangeLabel = step.code_ranges.map(({ line_start, line_end }) =>
+                    line_start === line_end ? `L${line_start}` : `L${line_start}-${line_end}`,
+                  ).join(', ');
+                  const isActive = step.id === activeFlowNodeId;
                   const isDecision = step.type === 'decision';
                   const isPill = step.type === 'start' || step.type === 'end';
                   const stateClass = isActive
                     ? 'border-emerald-500 bg-lime-100 shadow-lg shadow-emerald-900/10 ring-2 ring-emerald-200'
-                    : isComplete
-                      ? 'border-emerald-200 bg-emerald-50'
-                      : 'border-slate-200 bg-white';
+                    : 'border-slate-200 bg-white';
 
                   return (
-                    <React.Fragment key={`${stepLines.join('-')}-${index}`}>
+                    <React.Fragment key={step.id}>
                       <button
                         ref={(element) => { flowStepRefs.current[index] = element; }}
                         type="button"
                         aria-current={isActive ? 'step' : undefined}
-                        aria-label={`Lines ${stepLines.join(', ')}, ${step.title}. ${step.description}`}
+                        aria-label={`Source ${rangeLabel}, ${step.title}. ${step.description}`}
                         onClick={() => handleLineClick(index)}
                         className={`relative flex min-h-14 w-full max-w-sm flex-col items-center justify-center border-2 px-4 py-2 text-center transition-all duration-300 hover:border-emerald-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${isDecision ? 'my-1 min-h-24 max-w-[17rem] px-10' : isPill ? 'rounded-full' : 'rounded-xl'} ${stateClass}`}
                         style={isDecision ? { clipPath: 'polygon(50% 0, 100% 50%, 50% 100%, 0 50%)' } : undefined}
                       >
                         <span className={`text-[9px] font-extrabold uppercase tracking-wider ${isActive ? 'text-emerald-800' : 'text-slate-500'}`}>
-                          {isActive ? 'Active' : isComplete ? 'Complete' : step.type}
+                          {isActive ? 'Active' : step.type}
                         </span>
                         <span className="text-[11px] font-bold leading-tight text-emerald-950">{step.title}</span>
                         <span className="mt-0.5 text-[9px] leading-snug text-slate-600">{step.description}</span>
                         <span className="absolute right-2 top-1 text-[9px] font-semibold text-slate-400">
-                          L{stepLines.join(', ')}
+                          {rangeLabel}
                         </span>
                       </button>
-                      {index < flowSteps.length - 1 && (
-                        <ArrowDown
-                          aria-hidden="true"
-                          size={16}
-                          className={`my-0.5 shrink-0 ${index < resolvedActiveFlowIndex ? 'text-emerald-500' : 'text-slate-300'}`}
-                        />
+                      {step.next.length > 0 && (
+                        <div className="my-1 flex w-full max-w-sm flex-col items-center gap-1" aria-label="Outgoing execution connections">
+                          {step.next.map((nextId) => {
+                            const nextIndex = flowSteps.findIndex((candidate) => candidate.id === nextId);
+                            const nextStep = flowSteps[nextIndex];
+                            if (!nextStep) return null;
+                            const isLoopBack = nextIndex <= index && nextStep.type === 'decision';
+                            const isReturn = nextIndex <= index && step.type === 'end';
+                            const connectionLabel = isLoopBack
+                              ? 'Loop to'
+                              : isReturn
+                                ? 'Return to'
+                                : step.next.length > 1
+                                  ? 'Branch to'
+                                  : 'Next';
+                            return (
+                              <button
+                                key={`${step.id}-${nextId}`}
+                                type="button"
+                                onClick={() => handleLineClick(nextIndex)}
+                                className="inline-flex max-w-full items-center gap-1 rounded-full border border-emerald-200 bg-white px-2 py-1 text-[9px] text-emerald-800 hover:border-emerald-400 hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-600"
+                                aria-label={`${connectionLabel} ${nextStep.title}`}
+                              >
+                                {isLoopBack ? <RotateCcw size={11} /> : <ChevronDown size={11} />}
+                                <span>{connectionLabel}</span>
+                                <span className="max-w-40 truncate font-semibold">{nextStep.title}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       )}
                     </React.Fragment>
                   );

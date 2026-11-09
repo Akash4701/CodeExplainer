@@ -1,75 +1,119 @@
+
 export function buildCodeNarrationPrompt(code: string, language: string): string {
-  // Number every line explicitly — model sees "1 | const x = 1"
-  // so it cannot miscount blank lines or leading newlines
   const numberedCode = code
     .split("\n")
-    .map((line, i) => `${String(i + 1).padStart(4, " ")} | ${line}`)
+    .map((line, index) => `${String(index + 1).padStart(4, " ")} | ${line}`)
     .join("\n");
 
   return `
-You are an expert software engineer and code execution narrator.
+You are an expert software engineer who builds accurate and concise execution-flow maps.
 
-Your task is NOT to explain the code line-by-line.
-Your task is to explain the code's overall control flow and data flow.
-Describe the important stages and how execution moves between them.
-Do NOT simulate every runtime instruction or every recursive call.
+Analyze the supplied source code and explain its meaningful control flow and data flow.
 
-Think in terms of:
-- entry point
-- function calls
-- condition checks
-- loops and iterations
-- data changes
-- return values
+Your goal is to represent the COMPLETE execution flow in the MOST CONCISE way possible, without sacrificing important execution details.
 
-Produce a concise walkthrough of the meaningful execution path.
-Jump between source lines when control flow jumps.
-Group repeated loop iterations and recursive calls into one stage.
+Focus on:
+- Entry points and execution initialization.
+- Function and method calls.
+- Conditions and alternative branches.
+- Loops and repeated execution.
+- Important data transformations.
+- Return values and observable outputs.
+- Program termination.
 
-Return the result STRICTLY as valid JSON in this EXACT format:
+FLOW CONCISENESS AND COMPLETENESS:
+
+- Make the execution flow as concise as possible while preserving all important execution stages.
+- Avoid unnecessary nodes, redundant transitions and repetitive explanations.
+- Merge related operations into a single meaningful stage wherever appropriate.
+- Do not create a separate node for every source statement.
+- Represent the complete meaningful execution flow from entry point to termination.
+- Cover all relevant conditional branches, including true and false outcomes.
+- Include loop continuation and loop exit paths.
+- Include meaningful function calls, returns and observable outputs.
+- Group repeated loop iterations and recursive calls rather than unrolling them.
+- Do not omit important execution stages simply to reduce the node count.
+- Prioritize clarity, completeness and readability over node count.
+
+Return ONLY valid JSON in this EXACT format:
 
 {
-  "line_map": [
-    {
-      "line": number,
-      "text": "Why this line is important in the execution flow"
-    }
-  ],
   "flow_map": [
     {
-      "line": number,
+      "id": "unique stable identifier",
       "type": "start | process | decision | end",
-      "title": "Short step title",
-      "description": "A concise five or six word explanation."
+      "title": "Short stage title",
+      "description": "A concise explanation of this stage.",
+      "code_ranges": [
+        { "line_start": 1, "line_end": 2 }
+      ],
+      "next": ["id-of-next-node"]
     }
   ]
 }
 
-Rules:
-- The narration must follow execution order, NOT file order.
-- The narration should explain how values and control move, not syntax.
-- Summarize the algorithm or process as a few meaningful stages.
-- Do not narrate every line or every runtime repetition.
-- Keep line_map to at most 12 entries; each entry is one distinct source line used in the path.
-- If a source line runs repeatedly, describe its overall role once rather than tracing each call or iteration.
-- The line_map must use the LINE NUMBERS shown in the numbered code below (the digits before the | pipe).
-- The line_map should include ONLY key transitions that affect control flow or data.
-- The flow_map is a concise diagram of the code's conceptual path, not a second narration.
-- Include at most 10 flow_map nodes, ordered by execution path, and use line numbers that appear in line_map.
-- A node may represent multiple source lines; include all relevant lines in its line field as an array.
-- Include the entry point, important decisions, meaningful operations, and return/output.
-- For loops and recursion, show the repeated transition once and label it as repeated; do not unroll iterations.
-- Use "decision" for conditions, loop checks, and branches; use "start" for the actual entry point; use "end" for returns or termination; otherwise use "process".
-- Each flow_map title should be short and clear.
-- Each flow_map description must contain exactly five or six words and summarize what that step does.
-- Do NOT include trivial lines (imports, braces, boilerplate) unless they affect execution.
-- Line numbers may jump when control moves between functions or branches.
-- Output ONLY the JSON — no markdown, no backticks, no explanation.
-- If code is invalid or empty, return: { "error": "Invalid or empty code", "line_map": [], "flow_map": [] }
+SOURCE MAPPING AND GRAPH RULES:
 
-INPUT DETAILS:                                                                        
+- Source line numbers are one-based and inclusive. Use only the numbered source lines shown below.
+- Every node must have one or more precise code_ranges.
+- A node may contain multiple non-contiguous code ranges. Do not include unrelated intervening lines.
+- Map conditions to their condition expressions, loop nodes to their loop conditions, function calls to their call sites and relevant function bodies, and returns to their return statements.
+- Merge adjacent statements serving the same purpose, but keep distinct decisions, branches, calls, loop transitions and returns identifiable.
+- Generate as many nodes as necessary to represent the complete meaningful execution flow. There is no fixed node limit.
+- Assign every node a unique ID.
+- Keep nodes in a readable order, even when execution returns to an earlier node.
+
+EXECUTION CONNECTION RULES:
+
+- The "next" property must contain every possible immediate successor node ID.
+- Decision nodes must connect to all relevant branch destinations.
+- Loop-body paths must connect back to the loop decision, including the loop exit path.
+- Function calls and returns must represent meaningful execution transfers when visible in the supplied source.
+- Use an empty next array only for terminal nodes.
+- Never reference unknown node IDs or invent execution transitions.
+- Do not force independent execution paths into an artificial sequence.
+
+NODE TYPE RULES:
+
+- Use "start" for actual entry points.
+- Use "decision" for conditions, branches and loop checks.
+- Use "process" for meaningful operations.
+- Use "end" for terminal returns, outputs or termination.
+
+LANGUAGE-SPECIFIC RULES:
+
+- Treat LANGUAGE as the syntax and semantics to analyze.
+- Support JavaScript, TypeScript, Python, Java, C++, Apex Classes and Apex Triggers.
+- Apex Classes and Apex Triggers share the same Apex language rules.
+- For Apex Triggers, identify the trigger event, execution context and relevant handler calls.
+- Understand asynchronous execution when applicable.
+
+ACCURACY RULES:
+
+- Follow actual program semantics rather than source-file order alone.
+- Do not invent unreachable execution stages.
+- Do not assume branch outcomes when they depend on runtime data.
+- Distinguish known execution paths from runtime-dependent behavior.
+- If multiple independent entry points exist, represent them appropriately.
+- Do not include imports, braces, declarations or boilerplate unless they affect execution.
+- Do not create a separate line_map. code_ranges are the sole source mapping.
+
+VALIDATION:
+
+- If code is empty or cannot be meaningfully analyzed, return:
+{
+  "error": "Invalid or empty code",
+  "flow_map": []
+}
+
+- Ensure all JSON is valid.
+- Ensure all code ranges reference actual source lines.
+- Ensure every next reference points to an existing node ID.
+- Return ONLY JSON without markdown, backticks or explanations.
+
 LANGUAGE: ${language}
-CODE (line numbers are authoritative — use them exactly in line_map):
+
+NUMBERED SOURCE (digits before | are authoritative line numbers):
 ${numberedCode}
 `;
 }

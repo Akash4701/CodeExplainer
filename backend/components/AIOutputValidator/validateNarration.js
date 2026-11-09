@@ -1,39 +1,52 @@
-export function validateNarration(data) {
-    if (!data || typeof data !== "object" || !Array.isArray(data.line_map)) {
-        throw new Error("line_map must be array");
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+export function validateNarration(data, sourceLineCount) {
+    if (!isRecord(data) || !Array.isArray(data.flow_map) || data.flow_map.length === 0) {
+        throw new Error("flow_map must contain at least one execution node");
     }
-    for (const item of data.line_map) {
-        if (typeof item.line !== "number" ||
-            !Number.isInteger(item.line) ||
-            item.line < 1 ||
-            typeof item.text !== "string" ||
-            !item.text.trim()) {
-            throw new Error("Invalid line_map entry");
+    const flowTypes = new Set(["start", "process", "decision", "end"]);
+    const flowMap = data.flow_map;
+    const ids = new Set();
+    for (const candidate of flowMap) {
+        if (!isRecord(candidate) ||
+            typeof candidate.id !== "string" ||
+            !candidate.id.trim() ||
+            ids.has(candidate.id) ||
+            typeof candidate.type !== "string" ||
+            !flowTypes.has(candidate.type) ||
+            typeof candidate.title !== "string" ||
+            !candidate.title.trim() ||
+            typeof candidate.description !== "string" ||
+            !candidate.description.trim() ||
+            !Array.isArray(candidate.code_ranges) ||
+            candidate.code_ranges.length === 0 ||
+            !Array.isArray(candidate.next)) {
+            throw new Error("Invalid flow_map entry");
         }
-    }
-    if (data.flow_map !== undefined) {
-        if (!Array.isArray(data.flow_map)) {
-            throw new Error("flow_map must be an array");
-        }
-        const flowTypes = new Set(["start", "process", "decision", "end"]);
-        const narrationLines = new Set(data.line_map.map((item) => item.line));
-        for (const step of data.flow_map) {
-            const wordCount = typeof step?.description === "string"
-                ? step.description.trim().split(/\s+/).filter(Boolean).length
-                : 0;
-            const stepLines = Array.isArray(step?.line) ? step.line : [step?.line];
-            if (!step ||
-                typeof step !== "object" ||
-                stepLines.length === 0 ||
-                stepLines.some((line) => typeof line !== "number" || !narrationLines.has(line)) ||
-                !flowTypes.has(step.type) ||
-                typeof step.title !== "string" ||
-                !step.title.trim() ||
-                typeof step.description !== "string" ||
-                wordCount < 5 ||
-                wordCount > 6) {
-                throw new Error("Invalid flow_map entry");
+        ids.add(candidate.id);
+        for (const value of candidate.code_ranges) {
+            if (!isRecord(value)) {
+                throw new Error("Invalid flow_map source range");
             }
+            const { line_start, line_end } = value;
+            if (typeof line_start !== "number" ||
+                typeof line_end !== "number" ||
+                !Number.isInteger(line_start) ||
+                !Number.isInteger(line_end) ||
+                line_start < 1 ||
+                line_end < line_start ||
+                line_end > sourceLineCount) {
+                throw new Error("Invalid flow_map source range");
+            }
+        }
+    }
+    for (const candidate of flowMap) {
+        if (!isRecord(candidate) || !Array.isArray(candidate.next)) {
+            throw new Error("Invalid flow_map connection");
+        }
+        if (candidate.next.some((id) => typeof id !== "string" || !ids.has(id))) {
+            throw new Error("Invalid flow_map connection");
         }
     }
 }

@@ -4,51 +4,13 @@ import TextToSpeech from "../Components/textToSpeech";
 import CodeInput from "../Components/CodeInput";
 import FeatureCard from "../Components/FeatureCardProps";
 import { API_ENDPOINTS } from "../config/api";
-
-// Types
-interface LineExplanation {
-  line: number;
-  text: string;
-}
-
-type FlowStepType = "start" | "process" | "decision" | "end";
-
-interface FlowStep {
-  line: number | number[];
-  type: FlowStepType;
-  title: string;
-  description: string;
-}
-
-interface ExplanationData {
-  explanation: {
-    line_map: LineExplanation[];
-    flow_map?: FlowStep[];
-  };
-}
+import { FILE_EXTENSIONS, SUPPORTED_LANGUAGES } from "../config/languages";
+import { getFlowStepForLine, type ExplanationData } from "../types/executionFlow";
 
 interface MainContentProps {
   workspaceRef: React.RefObject<HTMLDivElement | null>;
   featuresRef: React.RefObject<HTMLDivElement | null>;
 }
-
-// Constants
-export const SUPPORTED_LANGUAGES = [
-  "JavaScript",
-  "TypeScript",
-  "Python",
-  "Java",
-  "C",
-  "C++",
-  "C#",
-  "Go",
-  "Rust",
-  "PHP",
-  "Apex",
-  "Apex Trigger",
-] as const;
-
-const FILE_EXTENSIONS = ".js,.jsx,.ts,.tsx,.py,.java,.cpp,.cs,.rb,.go,.rs,.php";
 
 const DEFAULT_CODE = `function fibonacci(n: number): number {
   if (n <= 1) return n;
@@ -64,6 +26,7 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
   const [code, setCode] = useState<string>(DEFAULT_CODE);
   const [isExplaining, setIsExplaining] = useState<boolean>(false);
   const [currentLine, setCurrentLine] = useState<number | null>(null);
+  const [activeFlowNodeId, setActiveFlowNodeId] = useState<string | null>(null);
   const [playbackControlsHost, setPlaybackControlsHost] = useState<HTMLDivElement | null>(null);
   const [explanationPreviewHost, setExplanationPreviewHost] = useState<HTMLDivElement | null>(null);
 
@@ -73,6 +36,13 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
   const isCodeEmpty = useMemo(() => !code.trim(), [code]);
 
   // Handlers
+  const handleCodeChange = useCallback((value: string) => {
+    setCode(value);
+    setExplanationData(null);
+    setActiveFlowNodeId(null);
+    setCurrentLine(null);
+  }, []);
+
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -81,42 +51,42 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
     reader.onload = (event) => {
       const result = event.target?.result;
       if (typeof result === "string") {
-        setCode(result);
+        handleCodeChange(result);
       }
     };
     reader.onerror = () => {
       console.error("Error reading file");
     };
     reader.readAsText(file);
-  }, []);
+  }, [handleCodeChange]);
 
   const CodeExplanation = async (code: string) => {
-    console.log("Starting code explanation request", code);
-
     if (!code.trim()) return;
     setIsExplaining(true);
-    fetch(API_ENDPOINTS.explain, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        language,
-        codeSnippet: code,
-      }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        setExplanationData(data);
-        console.log("Explanation data:", data);
-      })
-      .catch((error) => {
-        console.error("Error Fetching Explanation:", error);
-      })
-      .finally(() => {
-        setIsExplaining(false);
+    try {
+      const response = await fetch(API_ENDPOINTS.explain, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language, codeSnippet: code }),
       });
+      if (!response.ok) throw new Error("Unable to generate an execution flow.");
+      const data = await response.json() as ExplanationData;
+      setExplanationData(data);
+      setActiveFlowNodeId(null);
+      setCurrentLine(null);
+    } catch (error) {
+      console.error("Error fetching explanation:", error);
+    } finally {
+      setIsExplaining(false);
+    }
   };
+
+  const flowSteps = useMemo(() => explanationData?.explanation.flow_map ?? [], [explanationData]);
+  const activeCodeRanges = flowSteps.find((step) => step.id === activeFlowNodeId)?.code_ranges ?? [];
+  const handleLineSelect = useCallback((line: number) => {
+    setCurrentLine(line);
+    setActiveFlowNodeId(getFlowStepForLine(flowSteps, line)?.id ?? null);
+  }, [flowSteps]);
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#f4f8f4]">
@@ -226,15 +196,16 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
 
             {/* Code Editor Section */}
             <div className="p-4 sm:p-6">
-              <div ref={workspaceRef} className="grid scroll-mt-28 items-stretch gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+              <div ref={workspaceRef} className="grid scroll-mt-28 items-stretch gap-2 lg:grid-cols-[1.2fr_1.4fr]">
                 {/* Input Code */}
                 <div className="flex flex-col">
                   <CodeInput
                     code={code}
-                    setCode={setCode}
+                    setCode={handleCodeChange}
                     language={language}
                     currentLine={currentLine}
-                    onLineSelect={setCurrentLine}
+                    activeCodeRanges={activeCodeRanges}
+                    onLineSelect={handleLineSelect}
                   />
                 </div>
 
@@ -250,8 +221,10 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
                       language={language}
                       currentLine={currentLine}
                       setCurrentLine={setCurrentLine}
+                      activeFlowNodeId={activeFlowNodeId}
+                      setActiveFlowNodeId={setActiveFlowNodeId}
                       explanationData={explanationData}
-                      flowSteps={explanationData?.explanation.flow_map ?? []}
+                      flowSteps={flowSteps}
                       controlsHost={playbackControlsHost}
                       explanationHost={explanationPreviewHost}
                     />
