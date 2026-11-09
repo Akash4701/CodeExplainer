@@ -2,7 +2,6 @@ import { Linkedin, Mail } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="mt-auto border-t border-emerald-900/10 bg-[#e8f1e9] text-emerald-950">
       <div className="container mx-auto px-4 py-10 sm:px-6 sm:py-12">
         <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-lg">

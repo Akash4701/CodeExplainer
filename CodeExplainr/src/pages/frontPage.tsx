@@ -33,9 +33,19 @@ interface MainContentProps {
 }
 
 // Constants
-const SUPPORTED_LANGUAGES = [
-  "JavaScript", "TypeScript", "Python", "Java", "C++",
-  "C#", "Ruby", "Go", "Rust", "PHP",
+export const SUPPORTED_LANGUAGES = [
+  "JavaScript",
+  "TypeScript",
+  "Python",
+  "Java",
+  "C",
+  "C++",
+  "C#",
+  "Go",
+  "Rust",
+  "PHP",
+  "Apex",
+  "Apex Trigger",
 ] as const;
 
 const FILE_EXTENSIONS = ".js,.jsx,.ts,.tsx,.py,.java,.cpp,.cs,.rb,.go,.rs,.php";

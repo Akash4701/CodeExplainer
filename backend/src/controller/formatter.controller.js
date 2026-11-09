@@ -3,9 +3,18 @@ import { generateCodeNarration } from "../../components/generatePrompt.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
 // ─── Supported languages (mirrors LANG_META keys in formatPrompt.ts) ──────────
 const SUPPORTED_LANGUAGES = new Set([
-    "python", "javascript", "typescript", "java", "go", "rust", "cpp",
-    "csharp", "ruby", "php", "swift", "kotlin", "dart", "sql", "bash",
-    "r", "scala", "lua",
+     "JavaScript",
+  "TypeScript",
+  "Python",
+  "Java",
+  "C",
+  "C++",
+  "C#",
+  "Go",
+  "Rust",
+  "PHP",
+  "Apex",
+  "Apex Trigger",
 ]);
 // ─── Basic code sanity checks ─────────────────────────────────────────────────
 function validateCodeSnippet(code) {
