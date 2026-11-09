@@ -1,4 +1,4 @@
-import { Upload, Sparkles, Terminal, Mic, Loader2, Workflow } from "lucide-react";
+import { Upload, Sparkles, Terminal, Mic, Loader2, Workflow, MessageCircle } from "lucide-react";
 import { useState, useCallback, useMemo } from "react";
 import TextToSpeech from "../Components/textToSpeech";
 import CodeInput from "../Components/CodeInput";
@@ -248,24 +248,31 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
             <div className="grid gap-5 sm:grid-cols-2">
               <FeatureCard
                 icon={<Workflow className="text-emerald-600" size={22} />}
-                title="A flow shaped by your code"
-                description="See key actions, decisions, and results in execution order, mapped to the source lines where they happen."
+                title="A lesson shaped by your code"
+                description="See key actions, decisions, and results in order, mapped directly to the source lines where they happen."
                 gradient="bg-gradient-to-br from-emerald-50 to-lime-50"
                 accent="border-emerald-200"
               />
               <FeatureCard
                 icon={<Sparkles className="text-teal-600" size={22} />}
-                title="Flow step to source line"
-                description="Select a step to jump straight to its code. The matching line highlights while you hear why it matters."
+                title="Follow along line by line"
+                description="Play or pause the walkthrough, move to the previous or next step, and watch the matching code highlight."
                 gradient="bg-gradient-to-br from-teal-50 to-cyan-50"
                 accent="border-teal-200"
               />
               <FeatureCard
                 icon={<Mic className="text-lime-700" size={22} />}
-                title="Understand the logic, not every line"
-                description="Hear concise explanations of key transitions and data changes, without trudging through every line or repeated loop."
+                title="A voice that teaches, not just reads"
+                description="Hear clear explanations of the logic and decisions, without trudging through every repeated line."
                 gradient="bg-gradient-to-br from-lime-50 to-emerald-50"
                 accent="border-lime-200"
+              />
+              <FeatureCard
+                icon={<MessageCircle className="text-teal-600" size={22} />}
+                title="Ask whenever you get stuck"
+                description="Ask CodeTutor about the highlighted line, type your question or speak it, and listen to the answer."
+                gradient="bg-gradient-to-br from-cyan-50 to-teal-50"
+                accent="border-teal-200"
               />
             </div>
           </section>

@@ -7,7 +7,7 @@ import { getFlowStepForLine, type ExplanationData, type FlowStep } from '../type
 const EMPTY_FLOW_MAP: FlowStep[] = [];
 
 type SpeechRecognitionLike = {
-  continuous: boolean;
+  continuous: boolean;  
   interimResults: boolean;
   lang: string;
   start: () => void;
