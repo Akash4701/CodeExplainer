@@ -25,8 +25,11 @@ const Footer = ({ onFeedbackSubmitted }: FooterProps) => {
               A calmer way to understand unfamiliar code: listen, follow the flow, and learn as you go.
             </p>
             <p className="mt-4 text-sm font-semibold text-emerald-950">Made by Akash Saha</p>
+            <p className="mt-3 text-xs text-emerald-950/60">
+              © 2026 CodeJourney AI. Built for clearer code.
+            </p>
 
-            <nav aria-label="Connect with Akash Saha" className="mt-6 flex flex-wrap gap-3">
+            <nav aria-label="Connect with Akash Saha" className="mt-4 flex flex-wrap gap-3">
               <a
                 href="https://www.linkedin.com/in/akash-saha-270000351/"
                 target="_blank"
@@ -45,12 +48,6 @@ const Footer = ({ onFeedbackSubmitted }: FooterProps) => {
           </div>
 
           <FeedbackForm onSubmitted={onFeedbackSubmitted} />
-        </div>
-
-        <div className="mt-8 border-t border-emerald-900/15 pt-5">
-          <p className="text-xs text-emerald-950/60">
-            © 2026 CodeJourney AI. Built for clearer code.
-          </p>
         </div>
       </div>
     </footer>

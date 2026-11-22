@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LoaderCircle, Send, Star } from "lucide-react";
+import { ArrowUpRight, Github, LoaderCircle, Send, Star } from "lucide-react";
 import { API_ENDPOINTS } from "../config/api";
 
 interface FeedbackFormProps {
@@ -13,9 +13,11 @@ interface FeedbackResponse {
 
 export default function FeedbackForm({ onSubmitted }: FeedbackFormProps) {
   const [rating, setRating] = useState(0);
+  const [hoveredRating, setHoveredRating] = useState<number | null>(null);
   const [feedback, setFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const displayedRating = hoveredRating ?? rating;
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -65,8 +67,25 @@ export default function FeedbackForm({ onSubmitted }: FeedbackFormProps) {
         Help make the journey better
       </h2>
       <p className="mt-1 text-sm leading-relaxed text-slate-600">
-        A quick rating or a few words from you help shape what we build next.
+        A quick rating or a few words from you help shape what i build next.
       </p>
+
+      <a
+        href="https://github.com/Akash4701/CodeExplainer"
+        target="_blank"
+        rel="noreferrer"
+        className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-900/10 bg-emerald-50/70 p-3 text-left transition-colors hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-emerald-900 shadow-sm">
+          <Github size={20} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold text-emerald-950">Enjoying CodeJourney?</span>
+          <span className="block text-xs text-emerald-800">Star the project on GitHub</span>
+        </span>
+        <Star size={18} className="shrink-0 text-amber-500" fill="currentColor" />
+        <ArrowUpRight size={16} className="shrink-0 text-emerald-700" />
+      </a>
 
       <form onSubmit={handleSubmit} className="mt-5 space-y-4">
         <fieldset>
@@ -80,13 +99,17 @@ export default function FeedbackForm({ onSubmitted }: FeedbackFormProps) {
                 aria-checked={rating === value}
                 aria-label={`${value} ${value === 1 ? "star" : "stars"}`}
                 onClick={() => setRating(value)}
+                onMouseEnter={() => setHoveredRating(value)}
+                onMouseLeave={() => setHoveredRating(null)}
+                onFocus={() => setHoveredRating(value)}
+                onBlur={() => setHoveredRating(null)}
                 className="rounded-md p-1 text-amber-400 transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700"
               >
-                <Star size={26} fill={rating >= value ? "currentColor" : "none"} />
+                <Star size={26} fill={value <= displayedRating ? "currentColor" : "none"} />
               </button>
             ))}
             <span className="ml-2 text-xs text-slate-500" aria-live="polite">
-              {rating ? `${rating} out of 5` : "Choose a rating"}
+              {displayedRating ? `${displayedRating} out of 5` : "Choose a rating"}
             </span>
           </div>
         </fieldset>
