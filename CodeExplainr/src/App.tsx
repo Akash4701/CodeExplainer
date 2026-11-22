@@ -1,11 +1,13 @@
-import { useRef, type RefObject } from "react";
+import { useRef, useState, type RefObject } from "react";
 import Working from "./Components/Working";
+import FeedbackCelebration from "./Components/FeedbackCelebration";
 import Footer from "./pages/Footer";
 import { MainContent } from "./pages/frontPage";
 import Header from "./pages/Header";
 import "./App.css"
 
 export default function App() {
+  const [showFeedbackCelebration, setShowFeedbackCelebration] = useState(false);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const howItWorksRef = useRef<HTMLDivElement>(null);
   const featuresRef = useRef<HTMLDivElement>(null);
@@ -25,7 +27,11 @@ export default function App() {
       <div ref={howItWorksRef} className="scroll-mt-24">
         <Working onGetStarted={() => scrollTo(workspaceRef)} />
       </div>
-      <Footer />
+      <Footer onFeedbackSubmitted={() => setShowFeedbackCelebration(true)} />
+      <FeedbackCelebration
+        open={showFeedbackCelebration}
+        onClose={() => setShowFeedbackCelebration(false)}
+      />
     </div>
   );
 }

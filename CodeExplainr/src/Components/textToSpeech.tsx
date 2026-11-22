@@ -3,6 +3,8 @@ import { Play, Pause, Square, Volume2, FastForward, Rewind, Mic, Search, Loader2
 import { createPortal } from 'react-dom';
 import { API_ENDPOINTS } from '../config/api';
 import { getFlowStepForLine, type ExplanationData, type FlowStep } from '../types/executionFlow';
+import ApiErrorPanel from './ApiErrorPanel';
+import { readApiError, type ApiErrorInfo } from '../utils/apiError';
 
 const EMPTY_FLOW_MAP: FlowStep[] = [];
 
@@ -49,6 +51,7 @@ function TextToSpeech({
   const [questionFormLineIndex, setQuestionFormLineIndex] = useState<number | null>(null);
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
+  const [answerError, setAnswerError] = useState<ApiErrorInfo | null>(null);
   const [isAnswering, setIsAnswering] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [answerVoiceEnabled, setAnswerVoiceEnabled] = useState(true);
@@ -321,8 +324,8 @@ function TextToSpeech({
     setIsListening(true);
   };
 
-  const handleQuestionSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleQuestionSubmit = async (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     if (questionLineIndex === null || !question.trim() || isAnswering) return;
 
     const selectedLineNumber = questionLineIndex + 1;
@@ -331,6 +334,7 @@ function TextToSpeech({
 
     setIsAnswering(true);
     setAnswer('');
+    setAnswerError(null);
     try {
       const response = await fetch(API_ENDPOINTS.answerQuestion, {
         method: 'POST',
@@ -345,7 +349,7 @@ function TextToSpeech({
         }),
       });
       const data = await response.json() as { answer?: string; error?: string };
-      if (!response.ok) throw new Error(data.error ?? 'Unable to get an answer.');
+      if (!response.ok) throw await readApiError(response, 'Unable to get an answer.', data);
 
       const answerText = data.answer?.trim() || 'No answer was returned.';
       setAnswer(answerText);
@@ -354,7 +358,25 @@ function TextToSpeech({
         window.speechSynthesis.speak(new SpeechSynthesisUtterance(answerText));
       }
     } catch (error: unknown) {
-      setAnswer(error instanceof Error ? error.message : 'Unable to get an answer.');
+      if (error && typeof error === 'object' && 'message' in error && 'title' in error) {
+        setAnswerError(error as ApiErrorInfo);
+      } else if (error instanceof Error) {
+        setAnswerError({
+          code: 'REQUEST_FAILED',
+          title: 'Unable to answer the question',
+          message: error.message,
+          retryable: true,
+          status: 0,
+        });
+      } else {
+        setAnswerError({
+          code: 'NETWORK_ERROR',
+          title: 'Unable to connect',
+          message: 'Check your internet connection and try again.',
+          retryable: true,
+          status: 0,
+        });
+      }
     } finally {
       setIsAnswering(false);
     }
@@ -612,6 +634,14 @@ function TextToSpeech({
                     {answerVoiceEnabled ? 'Voice on' : 'Voice off'}
                   </button>
                 </div>
+              )}
+              {answerError && (
+                <ApiErrorPanel
+                  error={answerError}
+                  onRetry={() => void handleQuestionSubmit()}
+                  retryLabel="Retry answer"
+                  compact
+                />
               )}
             </form>
           )}

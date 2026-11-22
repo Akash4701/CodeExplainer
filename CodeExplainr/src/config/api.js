@@ -10,4 +10,5 @@ export const API_ENDPOINTS = {
   explain: `${API_BASE_URL}/api/v1/explain`,
   formatCode: `${API_BASE_URL}/api/v1/format-code`,
   answerQuestion: `${API_BASE_URL}/api/v1/answer-question`,
+  submitFeedback: `${API_BASE_URL}/api/v1/feedback`,
 };

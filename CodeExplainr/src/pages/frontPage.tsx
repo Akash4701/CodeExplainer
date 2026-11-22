@@ -6,6 +6,8 @@ import FeatureCard from "../Components/FeatureCardProps";
 import { API_ENDPOINTS } from "../config/api";
 import { FILE_EXTENSIONS, SUPPORTED_LANGUAGES } from "../config/languages";
 import { getFlowStepForLine, type ExplanationData } from "../types/executionFlow";
+import ApiErrorPanel from "../Components/ApiErrorPanel";
+import { readApiError, type ApiErrorInfo } from "../utils/apiError";
 
 interface MainContentProps {
   workspaceRef: React.RefObject<HTMLDivElement | null>;
@@ -31,6 +33,7 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
   const [explanationPreviewHost, setExplanationPreviewHost] = useState<HTMLDivElement | null>(null);
 
   const [explanationData, setExplanationData] = useState<ExplanationData | null>(null);
+  const [requestError, setRequestError] = useState<ApiErrorInfo | null>(null);
 
   // Memoized values
   const isCodeEmpty = useMemo(() => !code.trim(), [code]);
@@ -39,6 +42,7 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
   const handleCodeChange = useCallback((value: string) => {
     setCode(value);
     setExplanationData(null);
+    setRequestError(null);
     setActiveFlowNodeId(null);
     setCurrentLine(null);
   }, []);
@@ -63,19 +67,33 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
   const CodeExplanation = async (code: string) => {
     if (!code.trim()) return;
     setIsExplaining(true);
+    setRequestError(null);
     try {
       const response = await fetch(API_ENDPOINTS.explain, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ language, codeSnippet: code }),
       });
-      if (!response.ok) throw new Error("Unable to generate an execution flow.");
+      if (!response.ok) {
+        throw await readApiError(response, "Unable to generate an execution flow.");
+      }
       const data = await response.json() as ExplanationData;
       setExplanationData(data);
       setActiveFlowNodeId(null);
       setCurrentLine(null);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching explanation:", error);
+      if (error && typeof error === "object" && "message" in error && "title" in error) {
+        setRequestError(error as ApiErrorInfo);
+      } else {
+        setRequestError({
+          code: "NETWORK_ERROR",
+          title: "Unable to connect",
+          message: "Check your internet connection and try again.",
+          retryable: true,
+          status: 0,
+        });
+      }
     } finally {
       setIsExplaining(false);
     }
@@ -191,6 +209,15 @@ export const MainContent: React.FC<MainContentProps> = ({ workspaceRef, features
                 ref={setExplanationPreviewHost}
                 className="mt-3 min-h-16 rounded-xl border border-emerald-800/30 bg-emerald-950 p-3"
               />
+              {requestError && (
+                <div className="mt-3">
+                  <ApiErrorPanel
+                    error={requestError}
+                    onRetry={() => void CodeExplanation(code)}
+                    retryLabel="Retry explanation"
+                  />
+                </div>
+              )}
 
             </div>
 

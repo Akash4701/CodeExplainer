@@ -4,6 +4,8 @@ import type { editor as MonacoEditor } from 'monaco-editor'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { API_ENDPOINTS } from '../config/api'
 import type { CodeRange } from '../types/executionFlow'
+import ApiErrorPanel from './ApiErrorPanel'
+import { readApiError, type ApiErrorInfo } from '../utils/apiError'
 
 interface CodeInputProps {
   code: string;
@@ -32,6 +34,7 @@ function CodeInput({
   onLineSelect,
 }: CodeInputProps) {
   const [loading, setLoading] = useState(false)
+  const [formatError, setFormatError] = useState<ApiErrorInfo | null>(null)
   const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null)
   const decorationsRef = useRef<MonacoEditor.IEditorDecorationsCollection | null>(null)
   const onLineSelectRef = useRef(onLineSelect)
@@ -130,19 +133,47 @@ function CodeInput({
 
     try {
       setLoading(true)
+      setFormatError(null)
       const res = await fetch(API_ENDPOINTS.formatCode, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ codeSnippet: code, language }),
       })
 
-      const data = await res.json()
-      if (!res.ok || typeof data.formattedCode !== 'string') {
-        throw new Error(data.error ?? 'Unable to format code.')
+      let data: { formattedCode?: string } & Record<string, unknown>;
+      try {
+        data = await res.json()
+      } catch {
+        throw await readApiError(res, 'Unable to format code.')
+      }
+      if (!res.ok) {
+        throw await readApiError(res, 'Unable to format code.', data)
+      }
+      if (typeof data.formattedCode !== 'string') {
+        throw new Error('Unable to format code.')
       }
       setCode(data.formattedCode)
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Formatting failed:', error)
+      if (error && typeof error === 'object' && 'message' in error && 'title' in error) {
+        setFormatError(error as ApiErrorInfo)
+      } else if (error instanceof Error) {
+        setFormatError({
+          code: 'REQUEST_FAILED',
+          title: 'Unable to format code',
+          message: error.message,
+          retryable: true,
+          status: 0,
+        })
+      } else {
+        setFormatError({
+          code: 'NETWORK_ERROR',
+          title: 'Unable to connect',
+          message: 'Check your internet connection and try again.',
+          retryable: true,
+          status: 0,
+        })
+      }
     } finally {
       setLoading(false)
     }
@@ -163,6 +194,16 @@ function CodeInput({
           {loading ? 'Formatting…' : 'Format Code'}
         </button>
       </div>
+      {formatError && (
+        <div className="mb-3">
+          <ApiErrorPanel
+            error={formatError}
+            onRetry={() => void formatCode()}
+            retryLabel="Retry formatting"
+            compact
+          />
+        </div>
+      )}
 
       <div className="relative h-[710px] min-h-0 overflow-hidden rounded-xl border border-emerald-900/40 bg-[#10251b] shadow-inner shadow-emerald-950/30 transition-all focus-within:border-lime-400 focus-within:ring-2 focus-within:ring-lime-400/30">
         <Editor

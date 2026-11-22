@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { answerCodeQuestion } from "../../components/answerQuestion.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
+import { normalizeModelError } from "../utils/modelError.js";
 
 export const answerQuestion = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
@@ -32,9 +33,9 @@ export const answerQuestion = asyncHandler(
 
       res.status(200).json({ answer });
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Unable to answer the question.";
-      console.error("[answerQuestion] Model call failed:", message);
-      res.status(502).json({ error: "Unable to answer the question.", details: message });
+      const userError = normalizeModelError(error);
+      console.error("[answerQuestion] Model call failed:", userError.details);
+      res.status(userError.status).json(userError);
     }
   },
 );

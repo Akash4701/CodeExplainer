@@ -1,20 +1,12 @@
 // formatCode.controller.tsx
 import { generateCodeNarration } from "../../components/generatePrompt.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
+import { normalizeModelError } from "../utils/modelError.js";
 // ─── Supported languages (mirrors LANG_META keys in formatPrompt.ts) ──────────
 const SUPPORTED_LANGUAGES = new Set([
-     "JavaScript",
-  "TypeScript",
-  "Python",
-  "Java",
-  "C",
-  "C++",
-  "C#",
-  "Go",
-  "Rust",
-  "PHP",
-  "Apex",
-  "Apex Trigger",
+    "python", "javascript", "typescript", "java", "go", "rust", "cpp",
+    "csharp", "ruby", "php", "swift", "kotlin", "dart", "sql", "bash",
+    "r", "scala", "lua",
 ]);
 // ─── Basic code sanity checks ─────────────────────────────────────────────────
 function validateCodeSnippet(code) {
@@ -59,11 +51,9 @@ export const formatCode = asyncHandler(async (req, res) => {
         raw = await generateCodeNarration(codeSnippet, language, true);
     }
     catch (err) {
-        console.error("[formatCode] Model call failed:", err);
-        res.status(502).json({
-            error: "Upstream model request failed.",
-            details: err.message ?? "Unknown error",
-        });
+        const userError = normalizeModelError(err);
+        console.error("[formatCode] Model call failed:", userError.details);
+        res.status(userError.status).json(userError);
         return;
     }
     console.log("[formatCode] Raw model output (first 200 chars):", raw?.slice(0, 200));

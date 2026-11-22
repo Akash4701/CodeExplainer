@@ -24,10 +24,12 @@ const port=process.env.PORT|| 3000;
    import explainRoute from './src/router/explain.route.js';
    import formatRoute from './src/router/format.route.js';
         import questionRoute from './src/router/question.route.js';
+   import feedbackRoute from './src/router/feedback.route.js';
    
    
 
    app.use('/api/v1',explainRoute)
    app.use('/api/v1',formatRoute)
     app.use('/api/v1',questionRoute)
+   app.use('/api/v1',feedbackRoute)
 

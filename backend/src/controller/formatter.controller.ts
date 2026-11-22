@@ -1,6 +1,7 @@
 // formatCode.controller.tsx
 import { generateCodeNarration } from "../../components/generatePrompt.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
+import { normalizeModelError } from "../utils/modelError.js";
 import type { Request, Response } from "express";
 
 // ─── Supported languages (mirrors LANG_META keys in formatPrompt.ts) ──────────
@@ -65,11 +66,9 @@ export const formatCode = asyncHandler(
     try {
       raw = await generateCodeNarration(codeSnippet, language, true);
     } catch (err: any) {
-      console.error("[formatCode] Model call failed:", err);
-      res.status(502).json({
-        error: "Upstream model request failed.",
-        details: err.message ?? "Unknown error",
-      });
+      const userError = normalizeModelError(err);
+      console.error("[formatCode] Model call failed:", userError.details);
+      res.status(userError.status).json(userError);
       return;
     }
 

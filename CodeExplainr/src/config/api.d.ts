@@ -4,4 +4,5 @@ export const API_ENDPOINTS: {
   explain: string;
   formatCode: string;
   answerQuestion: string;
+  submitFeedback: string;
 };

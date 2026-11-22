@@ -1,5 +1,6 @@
 import { answerCodeQuestion } from "../../components/answerQuestion.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
+import { normalizeModelError } from "../utils/modelError.js";
 export const answerQuestion = asyncHandler(async (req, res) => {
     const { code, language, lineNumber, lineCode, existingExplanation, question } = req.body;
     if (typeof code !== "string" ||
@@ -18,9 +19,9 @@ export const answerQuestion = asyncHandler(async (req, res) => {
         res.status(200).json({ answer });
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : "Unable to answer the question.";
-        console.error("[answerQuestion] Model call failed:", message);
-        res.status(502).json({ error: "Unable to answer the question.", details: message });
+        const userError = normalizeModelError(error);
+        console.error("[answerQuestion] Model call failed:", userError.details);
+        res.status(userError.status).json(userError);
     }
 });
 //# sourceMappingURL=question.controller.js.map

@@ -10,6 +10,34 @@ Use `.env.example` as a starting point, and restart the Vite dev server after ch
 the environment file. Vite exposes `VITE_` variables in the browser, so do not put
 API keys or other secrets in this file.
 
+## Footer feedback form
+
+The feedback form is a separate `FeedbackForm` component. It sends its rating and
+comment to the backend, which forwards them to Google Apps Script. The site-wide
+celebration appears only after Apps Script confirms that a Google Form response
+was submitted.
+
+To connect it:
+
+1. Create a Google Form with a required 1–5 rating question and a required
+   paragraph feedback question. Disable email collection and remove any required
+   email question, since the app intentionally does not collect email addresses.
+2. Create a Google Apps Script project and paste in
+   `backend/google-apps-script/Code.gs`.
+3. In the Apps Script project settings, add Script Properties named `FORM_ID`,
+   `RATING_ITEM_ID`, and `FEEDBACK_ITEM_ID`. Use the editable form ID for
+   `FORM_ID`. Run `listFeedbackFormItems` from the Apps Script editor and copy
+   the numeric IDs for the rating and feedback questions into the other two
+   properties.
+4. Deploy the Apps Script as a Web app, executing as you and allowing access to
+   anyone. Copy its `/exec` URL into `GOOGLE_APPS_SCRIPT_URL` in
+   `backend/.env` (see `backend/.env.example`).
+5. Deploy the Apps Script as a new version after any script changes, then restart the backend. A submission error is shown in the feedback card; the
+   full-page celebration appears only when the backend receives a successful
+   save confirmation from Apps Script.
+
+The Apps Script URL is kept on the backend, not exposed as a frontend setting.
+
 ## Execution-flow mappings
 
 The explanation API returns `explanation.flow_map`. Each node has a stable `id`,
