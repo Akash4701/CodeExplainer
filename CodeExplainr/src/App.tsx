@@ -1,4 +1,5 @@
 import { useRef, useState, type RefObject } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import Working from "./Components/Working";
 import FeedbackCelebration from "./Components/FeedbackCelebration";
 import Footer from "./pages/Footer";
@@ -32,6 +33,7 @@ export default function App() {
         open={showFeedbackCelebration}
         onClose={() => setShowFeedbackCelebration(false)}
       />
+      <Analytics />
     </div>
   );
 }
